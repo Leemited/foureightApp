@@ -1,0 +1,55 @@
+{
+  "project_info": {
+    "project_number": "334232835607",
+    "firebase_url": "https://foureight-dadd1.firebaseio.com",
+    "project_id": "foureight-dadd1",
+    "storage_bucket": "foureight-dadd1.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:334232835607:android:7993fb80b74361c3",
+        "android_client_info": {
+          "package_name": "com.foureight"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "334232835607-8hiicvtnrmk1duf984r0l7qumgu3cloj.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.foureight",
+            "certificate_hash": "46b6215cdb1ad38e2d363e8638760be97003c01f"
+          }
+        },
+        {
+          "client_id": "334232835607-jeopvmvtd0p2jqdr6c9s7nttunmu8037.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAMl_tgtCIAg3qVB71o3WvDqY2u3z5sftc"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 2,
+          "other_platform_oauth_client": [
+            {
+              "client_id": "334232835607-jeopvmvtd0p2jqdr6c9s7nttunmu8037.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        },
+        "ads_service": {
+          "status": 2
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

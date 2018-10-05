@@ -1,0 +1,13 @@
+<resources>
+    <string name="app_name">48</string>
+    <string name="default_notification_channel_id" translatable="false">fcm_default_channel</string>
+    <string name="default_notification_channel_name" translatable="true">48</string>
+
+    <string name="todo">TODO</string>
+    <string name="rationale_title">권한설정</string>
+    <string name="rationale_message">해당앱을 사용하기위해 다음과 같은 권한이 필요합니다.</string>
+    <string name="saveCam">저장하기</string>
+    <string name="skipCam">건너뛰기</string>
+    <string name="cam_video_info">* 동영상링크 등록은 상세 등록 시 가능합니다.</string>
+    <string name="Network_msg">현재 인터넷에 연결되어 있지 않아 앱을 종료합니다.</string>
+</resources>
