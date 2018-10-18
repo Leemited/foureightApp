@@ -31,6 +31,7 @@ import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.Toast;
 import android.widget.Toolbar;
 
 import com.google.firebase.iid.FirebaseInstanceId;
@@ -63,6 +64,10 @@ public class MainActivity extends AppCompatActivity {
     public String url = "";
     private String mb_id,title,cate1,cate2,type,skip,filename="",videoname="";
     String[] files;
+
+    private final long FINISH_INTERVAL_TIME = 2000;
+    private long backPressedTime = 0;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -117,6 +122,7 @@ public class MainActivity extends AppCompatActivity {
         WebSettings webSettings = mWebview.getSettings();
         webSettings.setJavaScriptEnabled(true);
         webSettings.setJavaScriptCanOpenWindowsAutomatically(true);
+        webSettings.setSaveFormData(false);
         webSettings.setDomStorageEnabled(true);
         webSettings.setAllowFileAccess(true);
         webSettings.setAppCacheEnabled(false);
@@ -153,7 +159,12 @@ public class MainActivity extends AppCompatActivity {
 
         if(mb_id_chk!="" || mb_id_chk != null){
             Log.d(TAG, "onCreate: login" );
-            url = url+ "&app_mb_id="+mb_id_chk;
+
+            if(url.indexOf("?")!=-1) {
+                url = url + "&app_mb_id=" + mb_id_chk;
+            }else {
+                url = url + "?app_mb_id=" + mb_id_chk;
+            }
         }else{
             Log.d(TAG, "onCreate: notLogin");
         }
@@ -175,8 +186,8 @@ public class MainActivity extends AppCompatActivity {
 
     private class AndroidBridge {
         @JavascriptInterface
-        public String setLogin(String mb_id){
-            Log.d(TAG, "setLogin: ");
+        public String setLoginsetLogin(String mb_id){
+            Log.d(TAG, "AndroidBridge: "+ mb_id);
             if(mb_id!=null){
                 SharedPreferences pref = getSharedPreferences("AppLogin", MODE_PRIVATE);
                 SharedPreferences.Editor editor = pref.edit();
@@ -191,7 +202,7 @@ public class MainActivity extends AppCompatActivity {
 
         @JavascriptInterface
         public String setLogout(){
-            Log.d(TAG, "setLogout: ");
+            Log.d(TAG, "AndroidBridge: logout");
             SharedPreferences pref = getSharedPreferences("AppLogin", MODE_PRIVATE);
             String login = pref.getString("login", "");
             String mb_id_chk = pref.getString("mb_id", "");
@@ -273,6 +284,7 @@ public class MainActivity extends AppCompatActivity {
             if(mWebview.canGoBack()) {
                 WebBackForwardList webBackForwardList = mWebview.copyBackForwardList();
                 String backUrl = webBackForwardList.getItemAtIndex(webBackForwardList.getCurrentIndex()-1).getUrl();
+                Log.d(TAG, "onKeyDown: " + mWebview.getUrl());
                 if(backUrl.contains("login") != true){
                     Log.d(TAG, "onKeyDown: " + mWebview.getUrl());
                     if(mWebview.getUrl().contains("#modal") == true){
@@ -303,10 +315,27 @@ public class MainActivity extends AppCompatActivity {
                         mWebview.goBack();
                     }
                 }else{
-                    
+                    long tempTime = System.currentTimeMillis();
+                    long intervalTime = tempTime - backPressedTime;
+
+                    if (0 <= intervalTime && FINISH_INTERVAL_TIME >= intervalTime) {
+                        finish();
+                    } else {
+                        backPressedTime = tempTime;
+                        Toast.makeText(this, "뒤로가기를 한번더 누르면 종료 됩니다.", Toast.LENGTH_SHORT).show();
+                    }
                 }
             }else{
-                AlertDialog.Builder alert = new AlertDialog.Builder(this);
+                long tempTime = System.currentTimeMillis();
+                long intervalTime = tempTime - backPressedTime;
+
+                if (0 <= intervalTime && FINISH_INTERVAL_TIME >= intervalTime) {
+                    finish();
+                } else {
+                    backPressedTime = tempTime;
+                    Toast.makeText(this, "뒤로가기를 한번더 누르면 종료 됩니다.", Toast.LENGTH_SHORT).show();
+                }
+                /*AlertDialog.Builder alert = new AlertDialog.Builder(this);
                 alert.setTitle("앱 종료")
                         .setNegativeButton("취소", new DialogInterface.OnClickListener() {
                             @Override
@@ -321,7 +350,7 @@ public class MainActivity extends AppCompatActivity {
                             }
                         });
                 AlertDialog alertDialog = alert.create();
-                alert.show();
+                alert.show();*/
             }
             return true;
         }

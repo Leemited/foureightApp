@@ -215,7 +215,7 @@ public class CameraActivity extends AppCompatActivity implements SurfaceHolder.C
                 intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
                 intent.setType("image/*");
                 startActivityForResult(intent,GALLERY_CODE);
-
+                // TODO: 2018-10-17 : 갤럭시에서 여러장 선택이 안됨 
             }
         });
 
@@ -361,6 +361,7 @@ public class CameraActivity extends AppCompatActivity implements SurfaceHolder.C
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         //ArrayList imageList = new ArrayList<>();
+        Log.d(TAG, "onActivityResult: " + data);
         if(resultCode == RESULT_OK){
             switch (requestCode){
                 case GALLERY_CODE:
@@ -470,6 +471,7 @@ public class CameraActivity extends AppCompatActivity implements SurfaceHolder.C
     Camera.AutoFocusCallback camAutoFocuse = new Camera.AutoFocusCallback() {
         @Override
         public void onAutoFocus(boolean success, Camera cam) {
+            // TODO: 2018-10-17 : 리얼타임 5장과 재접속 시 확인 필요 
             if(success && camCount < 5) {
                 camera.takePicture(mySutterCallback, null, myPictureCallback_JPG);
             }else{
