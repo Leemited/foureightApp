@@ -15,11 +15,11 @@
       },
       "oauth_client": [
         {
-          "client_id": "334232835607-8hiicvtnrmk1duf984r0l7qumgu3cloj.apps.googleusercontent.com",
+          "client_id": "334232835607-spfrdtitsqn2fna5vivqb2q7ad9d314j.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.foureight",
-            "certificate_hash": "46b6215cdb1ad38e2d363e8638760be97003c01f"
+            "certificate_hash": "ae5ecb58a76accb44e4201220f19152e6845a5c7"
           }
         },
         {

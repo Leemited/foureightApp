@@ -1,17 +1,11 @@
 package com.foureight;
 
-import android.Manifest;
-import android.app.AlarmManager;
 import android.app.AlertDialog;
-import android.app.PendingIntent;
-import android.content.ClipData;
-import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
-import android.content.pm.ResolveInfo;
 import android.content.res.Configuration;
 import android.database.Cursor;
 import android.graphics.Bitmap;
@@ -19,18 +13,19 @@ import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
 import android.graphics.PixelFormat;
 import android.hardware.Camera;
-import android.media.*;
+import android.media.CamcorderProfile;
+import android.media.ExifInterface;
+import android.media.MediaRecorder;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Build;
+import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.Message;
 import android.provider.MediaStore;
-import android.support.annotation.NonNull;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
-import android.os.Bundle;
 import android.util.Base64;
 import android.util.Log;
 import android.view.Display;
@@ -64,8 +59,8 @@ import gun0912.tedbottompicker.TedBottomPicker;
 import static android.Manifest.permission.CAMERA;
 
 
-public class CameraActivity extends AppCompatActivity implements SurfaceHolder.Callback{
-    final static String TAG = "CameraActivity";
+public class CameraEditActivity extends AppCompatActivity implements SurfaceHolder.Callback{
+    final static String TAG = "CameraEditActivity";
     Camera camera;
     SurfaceHolder surfaceHolder;
     SurfaceView surfaceView;
@@ -82,7 +77,7 @@ public class CameraActivity extends AppCompatActivity implements SurfaceHolder.C
     private int camCount = 0,timer = 0, timer2 = 0;
     int viewWidth,viewHeight;
     TextView textView;
-    String mb_id,title,cate1,cate2,url,path,sd,file_name,filename,mPath,imgPath,imgName,type1,type2,videoname,wr_price,wr_price2;
+    String url,path,sd,file_name,filename,mPath,imgPath,imgName,index,mb_id;
     Uri selPhotoUri;
     byte[] bytes;
     MediaRecorder mRecorder;
@@ -114,55 +109,22 @@ public class CameraActivity extends AppCompatActivity implements SurfaceHolder.C
         sd = Environment.getExternalStorageDirectory().getAbsolutePath()+"/foureight";
 
         textView = (TextView)findViewById(R.id.camCount);
+        textView.setVisibility(View.GONE);
         camBtn = (Button)findViewById(R.id.camBtn);
         saveBtn = (Button)findViewById(R.id.saveBtn);
         videoBtn = (Button)findViewById(R.id.videoBtn);
+        videoBtn.setVisibility(View.GONE);
         photoBtn = (Button)findViewById(R.id.photoBtn);
         skipBtn = (Button)findViewById(R.id.skipBtn);
+        saveBtn.setVisibility(View.GONE);
+        if(getIntent().getStringExtra("index") != null) {
+            index = getIntent().getStringExtra("index");
+        }
         if(getIntent().getStringExtra("mb_id") != null) {
             mb_id = getIntent().getStringExtra("mb_id");
         }
-        if( getIntent().getStringExtra("title") != null) {
-            title = getIntent().getStringExtra("title");
-        }
-        if(getIntent().getStringExtra("cate1") != null) {
-            cate1 = getIntent().getStringExtra("cate1");
-        }
-        if(getIntent().getStringExtra("cate2") != null) {
-            cate2 = getIntent().getStringExtra("cate2");
-        }
-        if(getIntent().getStringExtra("type1") != null) {
-            type1 = getIntent().getStringExtra("type1");
-        }
-        if(getIntent().getStringExtra("type2") != null) {
-            type2 = getIntent().getStringExtra("type2");
-        }
-        if(getIntent().getStringExtra("wr_price") != null) {
-            wr_price = getIntent().getStringExtra("wr_price");
-        }
-        if(getIntent().getStringExtra("wr_price2") != null) {
-            wr_price2 = getIntent().getStringExtra("wr_price2");
-        }
-
-        if(type1.equals("2") || type1 == "2"){
-            Log.d(TAG, "Skip A");
-            skipBtn.setVisibility(View.VISIBLE);
-        }else{
-            Log.d(TAG, "Skip B");
-            skipBtn.setVisibility(View.GONE);
-        }
 
         getPreferences();
-
-        if(filename!=null || filename != ""){
-            Log.d(TAG, "onCreate: " + filename);
-            if(filename!=null ){
-                String[] files = filename.split(",");
-                int filenum = files.length;
-                textView.setText(filenum+"/5");
-                camCount=filenum;
-            }
-        }
 
         getWindow().setFormat(PixelFormat.UNKNOWN);
         surfaceView = (SurfaceView)findViewById(R.id.surfaceView);
@@ -205,16 +167,9 @@ public class CameraActivity extends AppCompatActivity implements SurfaceHolder.C
         skipBtn.setOnClickListener(new Button.OnClickListener(){
             @Override
             public void onClick(View v) {
-                Intent intent = new Intent(CameraActivity.this, MainActivity.class);
-                intent.putExtra("mb_id",mb_id);
-                intent.putExtra("title",title);
-                intent.putExtra("type1",type1);
-                intent.putExtra("cate1",cate1);
-                intent.putExtra("cate2",cate2);
-                intent.putExtra("wr_price",wr_price);
-                intent.putExtra("wr_price2",wr_price2);
+                Intent intent = new Intent(CameraEditActivity.this, MainActivity.class);
                 intent.putExtra("skip" , "skip");
-                startActivity(intent);
+                setResult(RESULT_OK,intent);
                 finish();
             }
         });
@@ -224,34 +179,20 @@ public class CameraActivity extends AppCompatActivity implements SurfaceHolder.C
         photoBtn.setOnClickListener(new Button.OnClickListener(){
             @Override
             public void onClick(View v) {
-                /*getPreferences();
-                Log.d(TAG, "onActivityResult onClick: " + camCount);
-                Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
-                intent.setData(MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
-                intent.setType("image/*");
-                intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
-                startActivityForResult(Intent.createChooser(intent,"사진을 선택해주세요."),GALLERY_CODE);*/
 
-                TedBottomPicker bottomSheetDialogFragment = new TedBottomPicker.Builder(CameraActivity.this)
+                TedBottomPicker bottomSheetDialogFragment = new TedBottomPicker.Builder(CameraEditActivity.this)
                         .setOnMultiImageSelectedListener(new TedBottomPicker.OnMultiImageSelectedListener() {
                             @Override
                             public void onImagesSelected(ArrayList<Uri> uriList) {
-                                Log.d(TAG, "onImagesSelected: " + uriList);
-                                String saveCount = (String) textView.getText();
-                                String[] temp = saveCount.split("/");
-                                int thisCount = Integer.parseInt(temp[0]);
-                                if(thisCount >= 5){
-                                    Toast.makeText(CameraActivity.this, "사진은 5개까지 선택가능합니다.", Toast.LENGTH_SHORT).show();
-                                    return;
-                                }
+
                                 for(int i = 0; i < uriList.size(); i++) {
 
                                     //String name_Str = getImageNameToUri(uriList.get(i));
-                                    String file_Path = uriList.get(i).toString();
-                                    String[] realPath = file_Path.split("//");
-                                    String filePath = realPath[1];
-                                    //int orientation = getOrientationOfImage(file_Path);
-                                    //Log.d(TAG, "onImagesSelected: orien" + orientation + "// 1" + filePath + "// 2" + file_Path);
+                                    String filePath = uriList.get(i).toString();
+                                    String[] realPath = filePath.split("//");
+                                    filePath = realPath[1];
+                                    int orientation = getOrientationOfImage(filePath);
+                                    Log.d(TAG, "onImagesSelected: orien" + orientation);
                                     selPhotoUri = uriList.get(i);
 
                                     try {
@@ -262,14 +203,14 @@ public class CameraActivity extends AppCompatActivity implements SurfaceHolder.C
                                         Log.d(TAG, "onImagesSelected: image : " +image);
 
                                         Bitmap resizeImg = Bitmap.createScaledBitmap(image, previewSize.width, previewSize.height,true);
-                                        //resizeImg = getRotatedBitmap(resizeImg, orientation);
+                                        resizeImg = getRotatedBitmap(resizeImg, orientation);
                                         Log.d(TAG, "onImagesSelected: size: " +resizeImg.getByteCount());
                                         bytes = bitmapToByteArray(resizeImg);
                                         url = "http://mave01.cafe24.com/mobile/photo_upload.php";
                                         sd = Environment.getExternalStorageDirectory().getAbsolutePath()+"/foureight";
                                         File file = new File(sd);
                                         file.mkdir();
-                                        file_name = System.currentTimeMillis() + "_" + mb_id + "_" + camCount + ".jpg";
+                                        file_name = System.currentTimeMillis() + "_" + mb_id + "_" + index + ".jpg";
                                         path = sd + "/" + file_name;
 
                                         file = new File(path);
@@ -279,22 +220,34 @@ public class CameraActivity extends AppCompatActivity implements SurfaceHolder.C
                                         fos.flush();
                                         fos.close();
 
+                                        Log.d(TAG, "filename picture: " + file_name + "// path : " + path);
+                                        new Thread(new Runnable() {
+                                            @Override
+                                            public void run() {
+                                                runOnUiThread(new Runnable() {
+                                                    @Override
+                                                    public void run() {
+                                                        Log.d(TAG, "run upload.. ");
+                                                    }
+                                                });
+                                                if(file_name != null) {
+                                                    url = "http://mave01.cafe24.com/mobile/photo_upload.php";
+                                                    int result = uploadFile(path, sd, file_name, url);
+                                                    Log.d(TAG, "run: " + result);
+                                                    if(result==200){
+                                                        Intent intent = new Intent(CameraEditActivity.this, MainActivity.class);
+                                                        intent.putExtra("filename", file_name);
+                                                        intent.putExtra("index", index);
+                                                        intent.putExtra("mb_id", mb_id);
 
-                                        if(filename == null || filename == ""){
-                                            filename = file_name;
-                                        }else {
-                                            filename = filename + ","+file_name;
-                                        }
-                                        if(mPath == null){
-                                            mPath = path;
-                                        }else {
-                                            mPath = mPath + ","+path;
-                                        }
-
-                                        Log.d(TAG, "filename picture: " + filename+" // path : " + mPath);
-                                        camCount++;
-                                        savePreferences();
-                                        textView.setText(camCount+"/5");
+                                                        //Toast.makeText(CameraEditActivity.this, "파일 업로드 완료", Toast.LENGTH_SHORT).show();
+                                                        removePreferences();
+                                                        setResult(RESULT_OK, intent);
+                                                        finish();
+                                                    }
+                                                }
+                                            }
+                                        }).start();
                                     }catch (FileNotFoundException e){
                                         e.printStackTrace();
                                     }catch (Exception e) {
@@ -307,7 +260,7 @@ public class CameraActivity extends AppCompatActivity implements SurfaceHolder.C
                         .showTitle(false)
                         .showCameraTile(false)
                         .setPreviewMaxCount(100)
-                        .setSelectMaxCount(5)
+                        .setSelectMaxCount(1)
                         .setCompleteButtonText("등록")
                         .setEmptySelectionText("사진을 선택해주세요.")
                         .create();
@@ -319,8 +272,8 @@ public class CameraActivity extends AppCompatActivity implements SurfaceHolder.C
         saveBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(final View v) {
-                Log.d(TAG, "filename : "+filename + " videoname : " +videoname);
-                if(filename != null || videoname != null ) {
+                //Log.d(TAG, "filename : "+filename + " videoname : " +videoname);
+                if(filename != null ) {
                     new Thread(new Runnable() {
                         @Override
                         public void run() {
@@ -332,25 +285,27 @@ public class CameraActivity extends AppCompatActivity implements SurfaceHolder.C
                             });
                             if(filename != null) {
                                 url = "http://mave01.cafe24.com/mobile/photo_upload.php";
-                                String[] files = filename.split(",");
-                                String[] paths = mPath.split(",");
-                                for (int i = 0; i < files.length; i++) {
-                                    Log.d(TAG, "run: " + files[i] + " // path : " + paths[i]);
-                                    uploadFile(paths[i], sd, files[i], url);
-                                }
+                                //String[] files = filename.split(",");
+                                //String[] paths = mPath.split(",");
+                                //for (int i = 0; i < files.length; i++) {
+                                    //Log.d(TAG, "run: " + files[i] + " // path : " + paths[i]);
+                                    uploadFile(mPath, sd, filename, url);
+                                //}
                             }
-                            if(videoname!=null) {
+                            /*if(videoname!=null) {
                                 url = "http://mave01.cafe24.com/mobile/video_upload.php";
                                 String vpath = sd +"/"+ videoname;
                                 Log.d(TAG, "video : " + videoname + "// vpath : " + vpath);
                                 uploadFile(vpath, sd, videoname, url);
-                            }
+                            }*/
                         }
                     }).start();
 
-                    Intent intent = new Intent(CameraActivity.this, MainActivity.class);
+                    Intent intent = new Intent(CameraEditActivity.this, MainActivity.class);
                     intent.putExtra("filename", filename);
-                    intent.putExtra("videoname", videoname);
+                    intent.putExtra("index", index);
+                    intent.putExtra("mb_id", mb_id);
+                    /*intent.putExtra("videoname", videoname);
                     intent.putExtra("timer2", timer2);
                     intent.putExtra("mb_id",mb_id);
                     intent.putExtra("title",title);
@@ -359,34 +314,21 @@ public class CameraActivity extends AppCompatActivity implements SurfaceHolder.C
                     intent.putExtra("cate1",cate1);
                     intent.putExtra("cate2",cate2);
                     intent.putExtra("wr_price",wr_price);
-                    intent.putExtra("wr_price2",wr_price2);
-                    Toast.makeText(CameraActivity.this, "파일 업로드 완료", Toast.LENGTH_SHORT).show();
-                    try{
-                        File file = new File(sd);
-                        File[] flist = file.listFiles();
-                        Log.d(TAG, "delete: " + flist.length);
-                        //Toast.makeText(getApplicationContext(), "imgcnt = " + flist.length, Toast.LENGTH_SHORT).show();
-                        for(int i = 0 ; i < flist.length ; i++)
-                        {
-                            String fname = flist[i].getName();
-                            Log.d(TAG, "deletefile :  " + fname);
-                            flist[i].delete();
-                        }
-                    }catch(Exception e){
-                        e.printStackTrace();
-                    }
+                    intent.putExtra("wr_price2",wr_price2);*/
 
+                    Toast.makeText(CameraEditActivity.this, "파일 업로드 완료", Toast.LENGTH_SHORT).show();
                     removePreferences();
-                    startActivity(intent);
+                    //startActivity(intent);
+                    setResult(RESULT_OK, intent);
                     finish();
                 }else{
-                    Toast.makeText(CameraActivity.this,"사진 또는 영상을 등록/선택해 주세요",Toast.LENGTH_SHORT).show();
+                    Toast.makeText(CameraEditActivity.this,"사진 또는 영상을 등록/선택해 주세요",Toast.LENGTH_SHORT).show();
                 }
             }
         });
 
         //비디오 버튼
-        videoBtn.setOnClickListener(new View.OnClickListener() {
+        /*videoBtn.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 if (isRecording) {
                     videoBtn.setBackgroundResource(R.drawable.video_btn);
@@ -432,7 +374,7 @@ public class CameraActivity extends AppCompatActivity implements SurfaceHolder.C
 
                 }
             }
-        });
+        });*/
 
 
         handler = new Handler(){
@@ -492,7 +434,7 @@ public class CameraActivity extends AppCompatActivity implements SurfaceHolder.C
     }
 
     public boolean showDials(){
-        CommonDialogs dialogs = new CommonDialogs(CameraActivity.this);
+        CommonDialogs dialogs = new CommonDialogs(CameraEditActivity.this);
         dialogs.showAlertDialog(this, "이미 녹화된 영상이 있습니다. 새로 촬영 할까요?", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
@@ -636,11 +578,12 @@ public class CameraActivity extends AppCompatActivity implements SurfaceHolder.C
     Camera.AutoFocusCallback camAutoFocuse = new Camera.AutoFocusCallback() {
         @Override
         public void onAutoFocus(boolean success, Camera cam) {
-            if(success && camCount < 5) {
-                camera.takePicture(mySutterCallback, null, myPictureCallback_JPG);
-            }else{
-                Toast.makeText(CameraActivity.this, "5장 모두 찰영하였습니다.",Toast.LENGTH_SHORT).show();
-            }
+            // TODO: 2018-10-17 : 리얼타임 5장과 재접속 시 확인 필요
+            //if(success && camCount < 5) {
+            camera.takePicture(mySutterCallback, null, myPictureCallback_JPG);
+            //}else{
+            //    Toast.makeText(CameraEditActivity.this, "5장 모두 찰영하였습니다.",Toast.LENGTH_SHORT).show();
+            //}
         }
     };
 
@@ -659,7 +602,7 @@ public class CameraActivity extends AppCompatActivity implements SurfaceHolder.C
 
             File file = new File(sd);
             file.mkdir();
-            file_name = System.currentTimeMillis() + "_" + mb_id + "_" + camCount + ".jpg";
+            file_name = System.currentTimeMillis() + "_" + mb_id + "_" + index + ".jpg";
             path = sd + "/" + file_name;
 
             try {
@@ -675,24 +618,36 @@ public class CameraActivity extends AppCompatActivity implements SurfaceHolder.C
                 e.printStackTrace();
             }
 
-            if(filename == null || filename == ""){
-                filename = file_name;
-            }else {
-                filename = filename + ","+file_name;
-            }
-            if(mPath == null){
-                mPath = path;
-            }else {
-                mPath = mPath + ","+path;
-            }
+            Log.d(TAG, "filename picture: " + file_name + "// path : " + path);
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            Log.d(TAG, "run upload.. ");
+                        }
+                    });
+                    if(file_name != null) {
+                        url = "http://mave01.cafe24.com/mobile/photo_upload.php";
+                        int result = uploadFile(path, sd, file_name, url);
+                        Log.d(TAG, "run: " + result);
+                        if(result==200){
+                            Intent intent = new Intent(CameraEditActivity.this, MainActivity.class);
+                            intent.putExtra("filename", file_name);
+                            intent.putExtra("index", index);
+                            intent.putExtra("mb_id", mb_id);
 
-            Log.d(TAG, "filename picture: " + filename + "// path : " + mPath);
-            camCount++;
-            textView.setText(camCount+"/5");
-            savePreferences();
-            camera.startPreview();
+                            //Toast.makeText(CameraEditActivity.this, "파일 업로드 완료", Toast.LENGTH_SHORT).show();
+                            removePreferences();
+                            setResult(RESULT_OK, intent);
+                            finish();
+                        }
+                    }
+                }
+            }).start();
 
-            //Log.d(TAG,"A::"+path+" and "+files[0]+" and "+files[1]+" and "+files[2]+" and "+files[3]+" and " + files[4] );
+
         }
     };
 
@@ -1012,7 +967,7 @@ public class CameraActivity extends AppCompatActivity implements SurfaceHolder.C
                         public void run() {
                             String msg = "File Upload Completed.\n\n See uploaded file here : \n\n" + uploadFileName;
                             //messageText.setText(msg);
-                            //Toast.makeText(CameraActivity.this, "File Upload Complete.", Toast.LENGTH_SHORT).show();
+                            Toast.makeText(CameraEditActivity.this, "파일 업로드 완료.", Toast.LENGTH_SHORT).show();
                         }
                     });
                 }
@@ -1026,7 +981,7 @@ public class CameraActivity extends AppCompatActivity implements SurfaceHolder.C
                 runOnUiThread(new Runnable() {
                     public void run() {
                         //messageText.setText("MalformedURLException Exception : check script url.");
-                        Toast.makeText(CameraActivity.this, "MalformedURLException", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(CameraEditActivity.this, "MalformedURLException", Toast.LENGTH_SHORT).show();
                     }
                 });
                 Log.e("Upload file to server", "error: " + ex.getMessage(), ex);
@@ -1036,7 +991,7 @@ public class CameraActivity extends AppCompatActivity implements SurfaceHolder.C
                 runOnUiThread(new Runnable() {
                     public void run() {
                         //messageText.setText("Got Exception : see logcat ");
-                        Toast.makeText(CameraActivity.this, "Got Exception : see logcat ",Toast.LENGTH_SHORT).show();
+                        Toast.makeText(CameraEditActivity.this, "Got Exception : see logcat ",Toast.LENGTH_SHORT).show();
                     }
                 });
                 Log.e(TAG, "Exception : "+ e.getMessage(), e);
@@ -1057,16 +1012,8 @@ public class CameraActivity extends AppCompatActivity implements SurfaceHolder.C
     private void getPreferences(){
         SharedPreferences pref = getSharedPreferences("pref", MODE_PRIVATE);
         filename = pref.getString("filename",filename);
-        videoname = pref.getString("videoname", videoname);
         mPath = pref.getString("mPath", mPath);
         mb_id = pref.getString("mb_id", mb_id);
-        title = pref.getString("title", title);
-        cate1 = pref.getString("cate1", cate1);
-        cate2 = pref.getString("cate2", cate2);
-        type1 = pref.getString("type1", type1);
-        type1 = pref.getString("type2", type2);
-        type1 = pref.getString("wr_price", wr_price);
-        type1 = pref.getString("wr_price2", wr_price2);
         //camCount = pref.getInt("camCount", camCount);
         Log.d(TAG, "getPreferences:" + filename  + "// "+ pref);
     }
@@ -1076,17 +1023,8 @@ public class CameraActivity extends AppCompatActivity implements SurfaceHolder.C
         SharedPreferences pref = getSharedPreferences("pref", MODE_PRIVATE);
         SharedPreferences.Editor editor = pref.edit();
         editor.putString("filename", filename);
-        editor.putString("write_active", "true");
-        editor.putString("videoname", videoname);
         editor.putString("mPath", mPath);
         editor.putString("mb_id", mb_id);
-        editor.putString("title", title);
-        editor.putString("cate1", cate1);
-        editor.putString("cate2", cate2);
-        editor.putString("type1", type1);
-        editor.putString("type2", type2);
-        editor.putString("wr_price", wr_price);
-        editor.putString("wr_price2", wr_price2);
         //editor.putInt("camCount", camCount);
         editor.commit();
         Log.d(TAG, "savePreferences: " + filename + "//" + pref);
@@ -1141,130 +1079,12 @@ public class CameraActivity extends AppCompatActivity implements SurfaceHolder.C
         }
     }
 
-    private boolean prepareVideoRecorder(){
-        Log.d(TAG, "prepareVideoRecorder: ");
-        // BEGIN_INCLUDE (configure_preview)
-        camera = CameraHelper.getDefaultCameraInstance();
-
-        // We need to make sure that our preview and recording video size are supported by the
-        // camera. Query camera to find all the sizes and choose the optimal size given the
-        // dimensions of our preview surface.
-        Camera.Parameters parameters = camera.getParameters();
-        List<Camera.Size> mSupportedPreviewSizes = parameters.getSupportedPreviewSizes();
-        List<Camera.Size> mSupportedVideoSizes = parameters.getSupportedVideoSizes();
-        Camera.Size optimalSize = CameraHelper.getOptimalVideoSize(mSupportedVideoSizes,
-                mSupportedPreviewSizes, mPreview.getWidth(), mPreview.getHeight());
-
-        // Use the same size for recording profile.
-        CamcorderProfile profile = CamcorderProfile.get(CamcorderProfile.QUALITY_480P);
-        profile.videoFrameWidth = optimalSize.width;
-        profile.videoFrameHeight = optimalSize.height;
-        // likewise for the camera object itself.
-        parameters.setRotation(angle);
-        parameters.setPreviewSize(profile.videoFrameWidth, profile.videoFrameHeight);
-        camera.setParameters(parameters);
-        camera.setDisplayOrientation(angle);
-        try {
-            // Requires API level 11+, For backward compatibility use {@link setPreviewDisplay}
-            // with {@link SurfaceView}
-            camera.setPreviewTexture(mPreview.getSurfaceTexture());
-        } catch (IOException e) {
-            Log.e(TAG, "Surface texture is unavailable or unsuitable" + e.getMessage());
-            return false;
-        }
-        // END_INCLUDE (configure_preview)
-
-
-        // BEGIN_INCLUDE (configure_media_recorder)
-        mMediaRecorder = new MediaRecorder();
-
-        // Step 1: Unlock and set camera to MediaRecorder
-        camera.unlock();
-        mMediaRecorder.setCamera(camera);
-
-        // Step 2: Set sources
-        mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.DEFAULT );
-        mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.CAMERA);
-
-        // Step 3: Set a CamcorderProfile (requires API Level 8 or higher)
-        mMediaRecorder.setProfile(profile);
-        mMediaRecorder.setMaxDuration(20000);
-
-        mMediaRecorder.setOrientationHint(angle);
-        // Step 4: Set output file
-        mOutputFile = CameraHelper.getOutputMediaFile(CameraHelper.MEDIA_TYPE_VIDEO);
-        if (mOutputFile == null) {
-            return false;
-        }
-
-        File file = new File(sd);
-        file.mkdir();
-        videoname = System.currentTimeMillis() + "_" + mb_id +".mp4";
-        path = sd + "/" + videoname;
-        savePreferences();
-        mMediaRecorder.setOutputFile(path);
-        // END_INCLUDE (configure_media_recorder)
-
-        // Step 5: Prepare configured MediaRecorder
-        try {
-            mMediaRecorder.prepare();
-        } catch (IllegalStateException e) {
-            Log.d(TAG, "IllegalStateException preparing MediaRecorder: " + e.getMessage());
-            releaseMediaRecorder();
-            return false;
-        } catch (IOException e) {
-            Log.d(TAG, "IOException preparing MediaRecorder: " + e.getMessage());
-            releaseMediaRecorder();
-            return false;
-        }
-        return true;
-    }
-
-    /**
-     * Asynchronous task for preparing the {@link android.media.MediaRecorder} since it's a long blocking
-     * operation.
-     */
-    class MediaPrepareTask extends AsyncTask<Void, Void, Boolean> {
-
-
-        @Override
-        protected Boolean doInBackground(Void... voids) {
-            // initialize video camera
-            if (prepareVideoRecorder()) {
-                Log.d(TAG, "doInBackground: 1");
-                // Camera is available and unlocked, MediaRecorder is prepared,
-                // now you can start recording
-
-                mMediaRecorder.start();
-                handler.sendEmptyMessage(0);
-
-                isRecording = true;
-            } else {
-                Log.d(TAG, "doInBackground: 2");
-                // prepare didn't work, release the camera
-                releaseMediaRecorder();
-                return false;
-            }
-            return true;
-        }
-
-        @Override
-        protected void onPostExecute(Boolean result) {
-            Log.d(TAG, "onPostExecute: ");
-            Log.d(TAG, result.toString());
-            if (!result) {
-                CameraActivity.this.finish();
-            }
-            camera.startPreview();
-        }
-    }
-
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         //backkey Event
         if(keyCode == KeyEvent.KEYCODE_BACK) {
             AlertDialog.Builder alert = new AlertDialog.Builder(this);
-            alert.setTitle("글 등록을 취소 하시겠습니까?")
+            alert.setTitle("사진수정을 취소 하시겠습니까?")
                     .setNegativeButton("취소", new DialogInterface.OnClickListener() {
                         @Override
                         public void onClick(DialogInterface dialogInterface, int i) {
@@ -1274,9 +1094,9 @@ public class CameraActivity extends AppCompatActivity implements SurfaceHolder.C
                     .setPositiveButton("종료", new DialogInterface.OnClickListener() {
                         @Override
                         public void onClick(DialogInterface dialogInterface, int i) {
-                            Intent intent = new Intent(CameraActivity.this,MainActivity.class);
-                            startActivity(intent);
-                            removePreferences();
+                            Intent intent = new Intent(CameraEditActivity.this,MainActivity.class);
+                            intent.putExtra("skip" , "skip");
+                            setResult(RESULT_OK,intent);
                             finish();
                         }
                     });

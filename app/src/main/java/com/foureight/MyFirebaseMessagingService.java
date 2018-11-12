@@ -20,6 +20,8 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.media.RingtoneManager;
 import android.net.Uri;
 import android.os.Build;
@@ -34,9 +36,14 @@ import com.firebase.jobdispatcher.Job;
 import com.google.firebase.messaging.FirebaseMessagingService;
 import com.google.firebase.messaging.RemoteMessage;
 
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+
 public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
     private static final String TAG = "MyFirebaseMsgService";
+    Bitmap bigPicture;
 
     /**
      * Called when message is received.
@@ -82,7 +89,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         // Also if you intend on generating your own notifications as a result of a received FCM
         // message, here is where that should be initiated. See sendNotification method below.
 
-        sendNotification(remoteMessage.getData().get("title"), remoteMessage.getData().get("message"),remoteMessage.getData().get("message"),remoteMessage.getData().get("urls"));
+        sendNotification(remoteMessage.getData().get("title"), remoteMessage.getData().get("message"), remoteMessage.getData().get("message"), remoteMessage.getData().get("urls"),remoteMessage.getData().get("chennal"),remoteMessage.getData().get("channelname"), remoteMessage.getData().get("imgurlstr"));
     }
     // [END receive_message]
 
@@ -112,42 +119,60 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
      *
      * @param messageBody FCM message body received.
      */
-    private void sendNotification(String title, String messageBody, CharSequence longMessage, String url) {
+    private void sendNotification(String title, String messageBody, CharSequence longMessage, String url,String channelId,String channelName, String imgurlstr) {
         Intent intent = new Intent(this, MainActivity.class);
         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
         Bundle bundle = new Bundle();
         bundle.putString("url", url);
         intent.putExtras(bundle);
         PendingIntent pendingIntent = PendingIntent.getActivity(this, 0 /* Request code */, intent,
-                PendingIntent.FLAG_ONE_SHOT);
+                PendingIntent.FLAG_UPDATE_CURRENT);
+        try {
+            URL photos = new URL(imgurlstr);
+            HttpURLConnection connection = (HttpURLConnection) photos.openConnection();
+            connection.setDoInput(true);
+            connection.connect();
+            InputStream bis = connection.getInputStream();
+            bigPicture = BitmapFactory.decodeStream(bis);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
 
-
-        String channelId = getString(R.string.default_notification_channel_id);
+        //String channelId = getString(R.string.default_notification_channel_id);
         Uri defaultSoundUri= RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
-        NotificationCompat.Builder notificationBuilder =
-                new NotificationCompat.Builder(this, channelId)
-                        .setSmallIcon(R.drawable.ic_stat_name)
-                        .setContentTitle(title)
-                        .setContentText(messageBody)
-                        .setAutoCancel(true)
-                        .setSound(defaultSoundUri)
-                        .setContentIntent(pendingIntent);
+        NotificationCompat.Builder notificationBuilder;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            notificationBuilder =
+                    new NotificationCompat.Builder(this, channelId);
+        }else{
+            notificationBuilder =
+                    new NotificationCompat.Builder(this);
+
+        }
+        notificationBuilder.setSmallIcon(R.drawable.ic_stat_name)
+                .setContentTitle(title)
+                .setContentText(messageBody)
+                .setContentIntent(pendingIntent)
+                .setAutoCancel(true)
+                .setSound(defaultSoundUri)
+                .setVibrate(new long[]{100,0,0,400,0,0,100,0,0,500,0,0});
+
 
         NotificationManager notificationManager =
                 (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
 
         notificationBuilder.setStyle(new NotificationCompat.BigTextStyle().bigText(longMessage));
 
-        // Since android Oreo notification channel is needed.
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationChannel channel = new NotificationChannel(channelId,title,NotificationManager.IMPORTANCE_DEFAULT);
-            notificationManager.createNotificationChannel(channel);
+        if(imgurlstr != null) {
+            notificationBuilder.setLargeIcon(bigPicture);
         }
 
         PowerManager pm = (PowerManager) this.getSystemService(Context.POWER_SERVICE);
         PowerManager.WakeLock wakelock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP, "TAG");
         wakelock.acquire(5000);
 
-        notificationManager.notify(0 /* ID of notification */, notificationBuilder.build());
+        notificationManager.notify(0 , notificationBuilder.build());
     }
+
+
 }

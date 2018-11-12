@@ -12,6 +12,8 @@
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.RECORD_VIDEO" />
+    <uses-permission android:name="android.permission.VIBRATE"/>
+    <uses-permission android:name="android.permission.WAKE_LOCK"/>
     <uses-feature android:name="android.hardware.camera" />
     <application
         android:allowBackup="true"
@@ -54,9 +56,10 @@
 
         <activity
             android:name=".MainActivity"
-            android:theme="@style/Theme.AppCompat.NoActionBar" android:screenOrientation="portrait" />
-        <activity android:name=".CameraActivity" android:theme="@style/Theme.AppCompat.NoActionBar" android:screenOrientation="sensor"/>
-        <activity android:name=".VideoActivity" android:theme="@style/Theme.AppCompat.NoActionBar" android:screenOrientation="portrait"/>
+            android:theme="@style/Theme.AppCompat.Light.NoActionBar" android:screenOrientation="portrait" />
+        <activity android:name=".CameraActivity" android:theme="@style/Theme.AppCompat.Light.NoActionBar" android:screenOrientation="sensor"/>
+        <activity android:name=".CameraEditActivity" android:theme="@style/Theme.AppCompat.Light.NoActionBar" android:screenOrientation="sensor"/>
+        <activity android:name=".VideoActivity" android:theme="@style/Theme.AppCompat.Light.NoActionBar" android:screenOrientation="portrait"/>
     </application>
 
 </manifest>
