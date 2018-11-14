@@ -381,11 +381,16 @@ public class MainActivity extends AppCompatActivity {
             startActivity(intent);
         }
 
-
         @JavascriptInterface
         public void Onkeyboard(){
             InputMethodManager inputMethodManager = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
             inputMethodManager.toggleSoftInput(InputMethodManager.SHOW_FORCED, InputMethodManager.HIDE_IMPLICIT_ONLY);
+        }
+
+        @JavascriptInterface
+        public void HideKeyboard(){
+            InputMethodManager inputMethodManager = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+            inputMethodManager.toggleSoftInput(InputMethodManager.HIDE_IMPLICIT_ONLY, InputMethodManager.SHOW_FORCED);
         }
 
         @JavascriptInterface
@@ -646,6 +651,15 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private class CustomWebClient extends WebViewClient {
+
+        @Override
+        public void onUnhandledKeyEvent(WebView view, KeyEvent event) {
+            if(event.getKeyCode() == 66 && view.getUrl().contains("my_location.php")){
+                view.loadUrl("javascript:mapKeySet()");
+            }
+            //super.onUnhandledKeyEvent(view, event);
+        }
+
         @Override
         public boolean shouldOverrideUrlLoading(WebView view, String url) {
             if (url.startsWith("tel:")) {

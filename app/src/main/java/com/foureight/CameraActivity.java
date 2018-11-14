@@ -1,17 +1,13 @@
 package com.foureight;
 
-import android.Manifest;
-import android.app.AlarmManager;
+
 import android.app.AlertDialog;
-import android.app.PendingIntent;
-import android.content.ClipData;
-import android.content.Context;
+import android.content.ContentResolver;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
-import android.content.pm.ResolveInfo;
 import android.content.res.Configuration;
 import android.database.Cursor;
 import android.graphics.Bitmap;
@@ -22,12 +18,10 @@ import android.hardware.Camera;
 import android.media.*;
 import android.net.Uri;
 import android.os.AsyncTask;
-import android.os.Build;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.Message;
 import android.provider.MediaStore;
-import android.support.annotation.NonNull;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -72,12 +66,9 @@ public class CameraActivity extends AppCompatActivity implements SurfaceHolder.C
     boolean previewImg = false;
     boolean isRecording = false;
     boolean videoFlag = true;
-    final int MY_PERMISSION_REQUEST_CODE = 100;
-    private static final int CAMERA_REQUEST_CODE = 30;
-    private static final int GALLERY_CODE = 1112;
+
     int serverResponseCode = 0;
-    int apiVersion = Build.VERSION.SDK_INT;
-    int angle,width,height,controlwidth,controlheight;
+    int angle,height;
     public Button camBtn,saveBtn,videoBtn,photoBtn,skipBtn;
     private int camCount = 0,timer = 0, timer2 = 0;
     int viewWidth,viewHeight;
@@ -85,7 +76,6 @@ public class CameraActivity extends AppCompatActivity implements SurfaceHolder.C
     String mb_id,title,cate1,cate2,url,path,sd,file_name,filename,mPath,imgPath,imgName,type1,type2,videoname,wr_price,wr_price2;
     Uri selPhotoUri;
     byte[] bytes;
-    MediaRecorder mRecorder;
     Handler handler;
 
     private TextureView mPreview;
@@ -152,9 +142,9 @@ public class CameraActivity extends AppCompatActivity implements SurfaceHolder.C
             skipBtn.setVisibility(View.GONE);
         }
 
-        getPreferences();
+        //getPreferences();
 
-        if(filename!=null || filename != ""){
+        /*if(filename!=null || filename != ""){
             Log.d(TAG, "onCreate: " + filename);
             if(filename!=null ){
                 String[] files = filename.split(",");
@@ -162,7 +152,7 @@ public class CameraActivity extends AppCompatActivity implements SurfaceHolder.C
                 textView.setText(filenum+"/5");
                 camCount=filenum;
             }
-        }
+        }*/
 
         getWindow().setFormat(PixelFormat.UNKNOWN);
         surfaceView = (SurfaceView)findViewById(R.id.surfaceView);
@@ -171,9 +161,6 @@ public class CameraActivity extends AppCompatActivity implements SurfaceHolder.C
         surfaceHolder.setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);
         mPreview = (TextureView) findViewById(R.id.surface_view);
 
-//        if(!hasPermission()){
-//            requestNecessryPermissions();
-//        }
         Display display = this.getWindowManager().getDefaultDisplay();
 
         switch (display.getRotation()){
@@ -192,6 +179,34 @@ public class CameraActivity extends AppCompatActivity implements SurfaceHolder.C
             default:
                 angle = 90;
                 break;
+        }
+
+        try{
+            File file = new File(sd);
+            File[] flist = file.listFiles();
+            Log.d(TAG, "delete: " + flist.length);
+            //Toast.makeText(getApplicationContext(), "imgcnt = " + flist.length, Toast.LENGTH_SHORT).show();
+            String[] ext;
+            ContentResolver resolver = getContentResolver();
+            for(int i = 0 ; i < flist.length ; i++)
+            {
+                String fname = flist[i].getName();
+                ext = fname.split("\\.");
+                Uri uri = null;
+
+                if (ext[1].toLowerCase().equals("jpg") || ext[1].toLowerCase().equals("png") || ext[1].toLowerCase().equals("gif")) {
+                    uri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
+                } else {
+                    uri = MediaStore.Video.Media.EXTERNAL_CONTENT_URI;
+                }
+                String selection = MediaStore.Images.Media.DATA + " = ?";
+                String[] selectionArgs = {sd}; // 실제 파일의 경로
+                int count = resolver.delete(uri, selection, selectionArgs);
+                Log.d(TAG, "onCreate ContentResolver: " + count);
+                flist[i].delete();
+            }
+        }catch(Exception e){
+            e.printStackTrace();
         }
 
 
@@ -240,7 +255,8 @@ public class CameraActivity extends AppCompatActivity implements SurfaceHolder.C
                                 String saveCount = (String) textView.getText();
                                 String[] temp = saveCount.split("/");
                                 int thisCount = Integer.parseInt(temp[0]);
-                                if(thisCount >= 5){
+                                thisCount = thisCount + uriList.size();
+                                if(thisCount > 5 ){
                                     Toast.makeText(CameraActivity.this, "사진은 5개까지 선택가능합니다.", Toast.LENGTH_SHORT).show();
                                     return;
                                 }
@@ -361,20 +377,6 @@ public class CameraActivity extends AppCompatActivity implements SurfaceHolder.C
                     intent.putExtra("wr_price",wr_price);
                     intent.putExtra("wr_price2",wr_price2);
                     Toast.makeText(CameraActivity.this, "파일 업로드 완료", Toast.LENGTH_SHORT).show();
-                    try{
-                        File file = new File(sd);
-                        File[] flist = file.listFiles();
-                        Log.d(TAG, "delete: " + flist.length);
-                        //Toast.makeText(getApplicationContext(), "imgcnt = " + flist.length, Toast.LENGTH_SHORT).show();
-                        for(int i = 0 ; i < flist.length ; i++)
-                        {
-                            String fname = flist[i].getName();
-                            Log.d(TAG, "deletefile :  " + fname);
-                            flist[i].delete();
-                        }
-                    }catch(Exception e){
-                        e.printStackTrace();
-                    }
 
                     removePreferences();
                     startActivity(intent);
@@ -792,13 +794,22 @@ public class CameraActivity extends AppCompatActivity implements SurfaceHolder.C
         }
     }
 
+
+
     @Override
     public void surfaceDestroyed(SurfaceHolder surfaceHolder) {
-        camera.stopPreview();
-        camera.release();
-        camera = null;
-        previewImg = false;
-        camCount = 0;
+        try {
+            camera.stopPreview();
+            camera.release();
+            camera = null;
+            previewImg = false;
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+        /*camCount = 0;
+        filename="";
+        videoname="";
+        textView.setText("0/5");*/
         Log.d(TAG, "surfaceDestroyed: " + camera + " previewImg : " + previewImg);
     }
 
@@ -1049,6 +1060,7 @@ public class CameraActivity extends AppCompatActivity implements SurfaceHolder.C
 
     @Override
     protected void onPause() {
+        Log.d(TAG, "onPause: ");
         super.onPause();
     }
 
@@ -1103,7 +1115,7 @@ public class CameraActivity extends AppCompatActivity implements SurfaceHolder.C
 
     @Override
     protected void onResume() {
-
+        Log.d(TAG, "onResume: ");
         if(filename!=null && filename != ""){
             String[] files = filename.split(",");
             int filenum = files.length;
@@ -1113,9 +1125,21 @@ public class CameraActivity extends AppCompatActivity implements SurfaceHolder.C
         super.onResume();
     }
 
+    
+    
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        Log.d(TAG, "onDestroy: ");
+        try {
+        camera.stopPreview();
+        camera.release();
+        camera = null;
+
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+        previewImg = false;
     }
 
     private void releaseMediaRecorder(){
@@ -1277,6 +1301,7 @@ public class CameraActivity extends AppCompatActivity implements SurfaceHolder.C
                             Intent intent = new Intent(CameraActivity.this,MainActivity.class);
                             startActivity(intent);
                             removePreferences();
+                            textView.setText("0/5");
                             finish();
                         }
                     });
@@ -1286,4 +1311,6 @@ public class CameraActivity extends AppCompatActivity implements SurfaceHolder.C
         }
         return false;
     }
+
+
 }

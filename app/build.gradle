@@ -6,8 +6,8 @@ android {
         applicationId "com.foureight"
         minSdkVersion 21
         targetSdkVersion 26
-        versionCode 4
-        versionName "1.4"
+        versionCode 7
+        versionName "1.7b"
         multiDexEnabled true
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
     }
