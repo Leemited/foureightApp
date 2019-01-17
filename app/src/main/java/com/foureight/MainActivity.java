@@ -3,6 +3,8 @@ package com.foureight;
 import android.app.AlertDialog;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -16,6 +18,8 @@ import android.location.Location;
 import android.location.LocationManager;
 import android.media.AudioAttributes;
 import android.media.RingtoneManager;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
@@ -40,6 +44,8 @@ import android.webkit.JavascriptInterface;
 import android.webkit.ValueCallback;
 import android.webkit.WebBackForwardList;
 import android.webkit.WebChromeClient;
+import android.webkit.WebResourceError;
+import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
@@ -70,6 +76,7 @@ public class MainActivity extends AppCompatActivity {
     private static final int INPUT_FILE_REQUEST_CODE = 1;
     private static final int CAMERA_REQUEST_CODE = 30;
     private static final int CAMERA_EDIT_REQUEST_CODE = 31;
+    private static final int VIDEO_EDIT_REQUEST_CODE = 32;
     private String mCameraPhotoPath;
 
     Location location;
@@ -81,7 +88,8 @@ public class MainActivity extends AppCompatActivity {
     public String regId;
 
     public String url = "";
-    private String mb_id,title,cate1,cate2,type1,type2,skip,filename="",videoname="",wr_price,wr_price2,index;
+    public String fcmUrl = "";
+    private String mb_id,title,cate1,cate2,type1,type2,skip,filename="",videoname="",wr_price,wr_price2,index,pd_price_type;
     String[] files;
 
     private final long FINISH_INTERVAL_TIME = 2000;
@@ -102,6 +110,7 @@ public class MainActivity extends AppCompatActivity {
         cate2=getIntent().getStringExtra("cate2");
         wr_price=getIntent().getStringExtra("wr_price");
         wr_price2=getIntent().getStringExtra("wr_price2");
+        pd_price_type=getIntent().getStringExtra("pd_price_type");
         index=getIntent().getStringExtra("index");
         if(getIntent().getStringExtra("skip")!=null) {
             skip = getIntent().getStringExtra("skip");
@@ -174,7 +183,7 @@ public class MainActivity extends AppCompatActivity {
             chatChannel.setSound(defaultSoundUri,att);
             chatChannel.setDescription("대화관련 설정 입니다.");
             chatChannel.enableVibration(true);
-            chatChannel.setVibrationPattern(new long[]{100,0,0,400,0,0,100,0,0,500,0,0});
+            chatChannel.setVibrationPattern(new long[]{100,0,0});
 
             notificationManager.createNotificationChannel(chatChannel);
 
@@ -183,7 +192,7 @@ public class MainActivity extends AppCompatActivity {
 
             NotificationChannel searchChannel = new NotificationChannel(searchId,searchName,NotificationManager.IMPORTANCE_HIGH);
             searchChannel.setSound(defaultSoundUri,att);
-            searchChannel.setDescription("대화관련 설정 입니다.");
+            searchChannel.setDescription("검색관련 설정 입니다.");
             searchChannel.enableVibration(true);
             searchChannel.setVibrationPattern(new long[]{100,0,0,400,0,0,100,0,0,500,0,0});
 
@@ -218,7 +227,7 @@ public class MainActivity extends AppCompatActivity {
         webSettings.setSaveFormData(false);
         webSettings.setDomStorageEnabled(true);
         webSettings.setAllowFileAccess(true);
-        webSettings.setAppCacheEnabled(false);
+        webSettings.setAppCacheEnabled(true);
         webSettings.setLoadsImagesAutomatically(true);
         webSettings.setUseWideViewPort(false);
         webSettings.setGeolocationEnabled(true);
@@ -238,12 +247,12 @@ public class MainActivity extends AppCompatActivity {
 
         if(files != null && files.length > 0){
             Log.d(TAG, "files: " + files[0]);
-            url = url+"mobile/page/write.php?mb_id="+mb_id+"&wr_type1="+type1+"&pd_type2="+type2+"&cate1="+cate1+"&cate2="+cate2+"&filename="+filename+"&title="+urlTitle+"&wr_price="+wr_price+"&wr_price2="+wr_price2;
+            url = url+"mobile/page/write.php?mb_id="+mb_id+"&wr_type1="+type1+"&pd_type2="+type2+"&cate1="+cate1+"&cate2="+cate2+"&filename="+filename+"&title="+urlTitle+"&wr_price="+wr_price+"&wr_price2="+wr_price2+"&pd_price_type="+pd_price_type;
         }
         if(videoname != null && filename != null){
             url = url + "&videoname="+videoname;
         }else if(videoname != null && filename == null){
-            url = url + "mobile/page/write.php?mb_id="+mb_id+"&wr_type1="+type1+"&pd_type2="+type2+"&title="+urlTitle+"&cate1="+cate1+"&cate2="+cate2+"&videoname="+videoname+"&wr_price="+wr_price+"&wr_price2="+wr_price2;
+            url = url + "mobile/page/write.php?mb_id="+mb_id+"&wr_type1="+type1+"&pd_type2="+type2+"&title="+urlTitle+"&cate1="+cate1+"&cate2="+cate2+"&videoname="+videoname+"&wr_price="+wr_price+"&wr_price2="+wr_price2+"&pd_price_type="+pd_price_type;
         }
         location = getLocation();
 
@@ -254,17 +263,16 @@ public class MainActivity extends AppCompatActivity {
         }
         if(index==null) {
             if (skip != null) {
-                url = "http://mave01.cafe24.com/mobile/page/write.php?mb_id=" + mb_id + "&wr_type1=" + type1 + "&pd_type2=" + type2 + "&title=" + urlTitle + "&cate1=" + cate1 + "&cate2=" + cate2 + "&wr_price=" + wr_price + "&wr_price2=" + wr_price2;
+                url = "http://mave01.cafe24.com/mobile/page/write.php?mb_id=" + mb_id + "&wr_type1=" + type1 + "&pd_type2=" + type2 + "&title=" + urlTitle + "&cate1=" + cate1 + "&cate2=" + cate2 + "&wr_price=" + wr_price + "&wr_price2=" + wr_price2+"&pd_price_type="+pd_price_type;
             }
         }
 
         SharedPreferences pref = getSharedPreferences("AppLogin", MODE_PRIVATE);
         String mb_id_chk = pref.getString("mb_id", "");
 
-        String writeStatus = get_writeStatus();
-
-        if(writeStatus!=null && writeStatus.equals("true")){
-
+        fcmUrl = getIntent().getStringExtra("url");
+        if(fcmUrl!=null){
+            url = fcmUrl;
         }
 
         if(mb_id_chk!="" || mb_id_chk != null){
@@ -279,7 +287,7 @@ public class MainActivity extends AppCompatActivity {
             Log.d(TAG, "onCreate: notLogin");
         }
 
-        Log.d(TAG, "onCreate: url = " + url + " // "+ urlTitle);
+        Log.d(TAG, "onCreate: url = " + url + " // "+ urlTitle + "// fcmUrl : "+ fcmUrl);
 
         mWebview.clearCache(true);
 
@@ -297,6 +305,13 @@ public class MainActivity extends AppCompatActivity {
 
 
     private class AndroidBridge {
+        @JavascriptInterface
+        public void copyLink(String link){
+            ClipboardManager clipboardManager = (ClipboardManager)getSystemService(CLIPBOARD_SERVICE);
+            ClipData clipData = ClipData.newPlainText("48링크", link);
+            clipboardManager.setPrimaryClip(clipData);
+        }
+
         @JavascriptInterface
         public String setLogin(String mb_id){
             Log.d(TAG, "AndroidBridge: "+ mb_id);
@@ -342,7 +357,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         @JavascriptInterface
-        public void camereOn(final String mb_id, final String title, final String cate1, final String cate2,final String type1, final String type2,final String wr_price, final String wr_price2) {
+        public void camereOn(final String mb_id, final String title, final String cate1, final String cate2,final String type1, final String type2,final String wr_price, final String wr_price2, final String pd_price_type) {
             Log.d(TAG, "cameraOn :" + title);
             Intent intent = new Intent(MainActivity.this,CameraActivity.class);
             intent.putExtra("mb_id",mb_id);
@@ -353,18 +368,26 @@ public class MainActivity extends AppCompatActivity {
             intent.putExtra("type2",type2);
             intent.putExtra("wr_price",wr_price);
             intent.putExtra("wr_price2",wr_price2);
+            intent.putExtra("pd_price_type",pd_price_type);
             startActivity(intent);
             finish();
         }
 
         @JavascriptInterface
         public void camereOn2(final String mb_id,final String index) {
-            Log.d(TAG, "cameraOn :" + title);
             Intent intent = new Intent(MainActivity.this,CameraEditActivity.class);
             intent.putExtra("mb_id",mb_id);
             intent.putExtra("index",index);
             startActivityForResult(intent,CAMERA_EDIT_REQUEST_CODE);
             //finish();
+        }
+
+        @JavascriptInterface
+        public void camereOn3(final String mb_id) {
+            Log.d(TAG, "camereOn3: " + mb_id);
+            Intent intent = new Intent(MainActivity.this,CameraEditCameraActivity.class);
+            intent.putExtra("mb_id",mb_id);
+            startActivityForResult(intent,VIDEO_EDIT_REQUEST_CODE);
         }
 
         @JavascriptInterface
@@ -394,6 +417,15 @@ public class MainActivity extends AppCompatActivity {
         }
 
         @JavascriptInterface
+        public void resetBadge(){
+            Intent badgeIntent = new Intent("android.intent.action.BADGE_COUNT_UPDATE");
+            badgeIntent.putExtra("badge_count",0);
+            badgeIntent.putExtra("badge_count_package_name", getPackageName());
+            badgeIntent.putExtra("badge_count_class_name", SplashActivity.class.getName());
+            sendBroadcast(badgeIntent);
+        }
+
+        @JavascriptInterface
         public String getLocation() {
             String loc = "";
             isGetLocation = true;
@@ -401,17 +433,6 @@ public class MainActivity extends AppCompatActivity {
             locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
             isGPSEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
             isNetworkEnabled = locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
-
-            if(isNetworkEnabled){
-                if (ActivityCompat.checkSelfPermission(getApplicationContext(), android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(getApplicationContext(), android.Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                    location = null;
-                }else {
-                    locationManager.requestLocationUpdates(locationManager.NETWORK_PROVIDER, 100, 1, myLoc);
-                    if(locationManager != null){
-                        location = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
-                    }
-                }
-            }
             if(isGPSEnabled){
                 if (ActivityCompat.checkSelfPermission(getApplicationContext(), android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(getApplicationContext(), android.Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
                     location = null;
@@ -422,6 +443,17 @@ public class MainActivity extends AppCompatActivity {
                     }
                 }
             }
+            if(isNetworkEnabled){
+                if (ActivityCompat.checkSelfPermission(getApplicationContext(), android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(getApplicationContext(), android.Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                    location = null;
+                }else {
+                    locationManager.requestLocationUpdates(locationManager.NETWORK_PROVIDER, 100, 1, myLoc);
+                    if(locationManager != null){
+                        location = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
+                    }
+                }
+            }
+
             if (location != null) {
                 loc = location.getLatitude()+"/"+location.getLongitude();
                 locationManager.removeUpdates(myLoc);
@@ -654,14 +686,29 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         public void onUnhandledKeyEvent(WebView view, KeyEvent event) {
+            Log.d(TAG, "onUnhandledKeyEvent: " + view.getUrl());
             if(event.getKeyCode() == 66 && view.getUrl().contains("my_location.php")){
                 view.loadUrl("javascript:mapKeySet()");
+            }if(event.getKeyCode() == 66 && (view.getUrl().contains("http://mave01.cafe24.com/#") || view.getUrl().contains("http://mave01.cafe24.com/index.php"))){
+                view.loadUrl("javascript:fnOnCam()");
             }
             //super.onUnhandledKeyEvent(view, event);
         }
 
         @Override
         public boolean shouldOverrideUrlLoading(WebView view, String url) {
+            if(!isNetworkConnected(MainActivity.this)){
+                /*CommonDialogs cm = new CommonDialogs(MainActivity.this);
+
+                cm.showAlertDialog(MainActivity.this, "현재 인터넷 연결이 안되어 있어 앱을 종료합니다.", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        finish();
+                    }
+                },null);*/
+                finish();
+                Toast.makeText(MainActivity.this,"현재 인터넷이 연결되어 있지 않아 앱을 종료 하였습니다.",Toast.LENGTH_SHORT).show();
+            }
             if (url.startsWith("tel:")) {
                 Intent intent = new Intent(Intent.ACTION_DIAL, Uri.parse(url));
                 startActivity(intent);
@@ -699,6 +746,7 @@ public class MainActivity extends AppCompatActivity {
                 CookieManager.getInstance().flush();
             }
         }
+
     }
 
     private File createImageFile() throws IOException{
@@ -741,6 +789,14 @@ public class MainActivity extends AppCompatActivity {
                 mUploadMessage.onReceiveValue(result);
                 mUploadMessage = null;
             }
+        }else if(requestCode == VIDEO_EDIT_REQUEST_CODE && resultCode == RESULT_OK){
+            String videoname = data.getStringExtra("videoname");
+            String skip = data.getStringExtra("skip");
+            Log.d(TAG, "index: " + index + "// videoname : " + videoname);
+            if(skip==null || skip==""){
+                Log.d(TAG, "index: " + index + "// videoname : " + videoname + "// skip: " + skip);
+                mWebview.loadUrl("javascript:setVideo('"+videoname+"');");
+            }
         }else{
             if(mFilePathCallback != null) mFilePathCallback.onReceiveValue(null);
             if(mUploadMessage != null) mUploadMessage.onReceiveValue(null);
@@ -774,11 +830,43 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public Location getLocation(){
+
+
+
         isGetLocation = true;
         LocationImpl myLoc = new LocationImpl();
         locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
         isGPSEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
         isNetworkEnabled = locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
+
+        if(!isGPSEnabled && !isNetworkEnabled){
+            CommonDialogs cm = new CommonDialogs(MainActivity.this);
+            cm.showAlertDialog(MainActivity.this, "GPS정보를 찾을 수 없습니다. \r설정창으로 이동하시겠습니까?", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    //확인
+                    Intent intent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
+                    startActivity(intent);
+                }
+            }, new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    //취소
+                }
+            });
+            return null;
+        }
+
+        if(isGPSEnabled){
+            if (ActivityCompat.checkSelfPermission(getApplicationContext(), android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(getApplicationContext(), android.Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                location = null;
+            }else {
+                locationManager.requestLocationUpdates(locationManager.GPS_PROVIDER, 100, 1, myLoc);
+                if(locationManager != null){
+                    location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+                }
+            }
+        }
 
         if(isNetworkEnabled){
             if (ActivityCompat.checkSelfPermission(getApplicationContext(), android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(getApplicationContext(), android.Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
@@ -790,16 +878,8 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         }
-        if(isGPSEnabled){
-            if (ActivityCompat.checkSelfPermission(getApplicationContext(), android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(getApplicationContext(), android.Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                location = null;
-            }else {
-                locationManager.requestLocationUpdates(locationManager.GPS_PROVIDER, 100, 1, myLoc);
-                if(locationManager != null){
-                    location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
-                }
-            }
-        }
+
+        //Log.d(TAG, "getLocation: " + location.getLatitude());
 
         locationManager.removeUpdates(myLoc);
         return location;
@@ -818,6 +898,8 @@ public class MainActivity extends AppCompatActivity {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
             CookieSyncManager.getInstance().stopSync();
         }
+        InputMethodManager inputMethodManager = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+        inputMethodManager.hideSoftInputFromWindow(mWebview.getWindowToken(),0);
     }
 
     @Override
@@ -826,13 +908,32 @@ public class MainActivity extends AppCompatActivity {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
             CookieSyncManager.createInstance(this);
         }
+        InputMethodManager inputMethodManager = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+        inputMethodManager.hideSoftInputFromWindow(mWebview.getWindowToken(),0);
     }
 
     /*
-    작성중인 글이 있는지 체크
-     */
-    public String get_writeStatus(){
-        SharedPreferences pref = getSharedPreferences("pref", MODE_PRIVATE);
-        return pref.getString("write_active","");
+    * 네트워크 상태 체크
+    */
+    public static boolean isNetworkConnected(Context context){
+        ConnectivityManager manager = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo mobile = manager.getNetworkInfo(ConnectivityManager.TYPE_MOBILE);
+        NetworkInfo wifi = manager.getNetworkInfo(ConnectivityManager.TYPE_WIFI);
+        NetworkInfo winmax = manager.getNetworkInfo(ConnectivityManager.TYPE_WIMAX);
+        boolean bwinmax = false;
+        if(winmax != null){
+            bwinmax = winmax.isConnected();
+        }
+        if(mobile != null){
+            if(mobile.isConnected() || wifi.isConnected() || bwinmax) {
+                return true;
+            }
+        }else{
+            if(wifi.isConnected() || bwinmax) {
+                return false;
+            }
+        }
+        return false;
+        //return manager.getActiveNetworkInfo() != null;
     }
 }

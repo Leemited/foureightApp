@@ -20,6 +20,9 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.media.RingtoneManager;
@@ -39,11 +42,13 @@ import com.google.firebase.messaging.RemoteMessage;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.List;
 
 public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
     private static final String TAG = "MyFirebaseMsgService";
     Bitmap bigPicture;
+    private int badgeCount = 0;
 
     /**
      * Called when message is received.
@@ -172,6 +177,28 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         wakelock.acquire(5000);
 
         notificationManager.notify(0 , notificationBuilder.build());
+
+        SharedPreferences pref = getSharedPreferences("badge_count",MODE_PRIVATE);
+
+        int badge = pref.getInt("badge_count",0);
+
+        if(badge > 0) {
+            badgeCount = badge + 1;
+        }else{
+            badgeCount++;
+        }
+
+        Log.d(TAG, "sendNotification: count?? " + badgeCount);
+
+        Intent badgeIntent = new Intent("android.intent.action.BADGE_COUNT_UPDATE");
+        badgeIntent.putExtra("badge_count",badgeCount);
+        badgeIntent.putExtra("badge_count_package_name", getPackageName());
+        badgeIntent.putExtra("badge_count_class_name",SplashActivity.class.getName());
+        sendBroadcast(badgeIntent);
+
+        SharedPreferences.Editor editor = pref.edit();
+        editor.putInt("badgeCount", badgeCount);
+        editor.commit();
     }
 
 

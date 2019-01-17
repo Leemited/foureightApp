@@ -32,6 +32,7 @@
     <string name="saveCam">NEXT</string>
     <string name="skipCam">SKIP</string>
     <string name="cam_video_info">* 동영상링크 등록은 상세 등록 시 가능합니다.</string>
+    <string name="cam_video_info2">* 동영상파일 용량은 20MB 이하로 등록가능합니다.</string>
     <string name="Network_msg">현재 인터넷에 연결되어 있지 않아 앱을 종료합니다.</string>
     <string name="gallery_title">앨범</string>
 </resources>

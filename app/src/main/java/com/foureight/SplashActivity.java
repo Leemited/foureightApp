@@ -6,6 +6,7 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.AsyncTask;
@@ -43,6 +44,17 @@ public class SplashActivity extends AppCompatActivity {
         DisplayMetrics metrics = new DisplayMetrics();
         WindowManager windowManager = (WindowManager) getApplicationContext().getSystemService(Context.WINDOW_SERVICE);
         windowManager.getDefaultDisplay().getMetrics(metrics);
+
+        SharedPreferences pref = getSharedPreferences("badge_count",MODE_PRIVATE);
+        SharedPreferences.Editor editor = pref.edit();
+        editor.remove("badgeCount");
+        editor.commit();
+
+        Intent badgeIntent = new Intent("android.intent.action.BADGE_COUNT_UPDATE");
+        badgeIntent.putExtra("badge_count",0);
+        badgeIntent.putExtra("badge_count_package_name", getPackageName());
+        badgeIntent.putExtra("badge_count_class_name",SplashActivity.class.getName());
+        sendBroadcast(badgeIntent);
 
         if(!isNetworkConnected(SplashActivity.this)){
             CommonDialogs cm = new CommonDialogs(this);

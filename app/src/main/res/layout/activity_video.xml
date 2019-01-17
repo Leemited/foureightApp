@@ -1,22 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
 <android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    tools:context=".MainActivity">
-
+    >
 
     <SurfaceView
-        android:id="@+id/surfaceView"
+        android:id="@+id/surfaceView2"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:orientation="horizontal" />
+        android:layout_height="match_parent" />
 
     <TextureView
+        android:id="@+id/surface_view2"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:id="@+id/surface_view" />
+        android:layout_height="match_parent" />
 
     <android.support.constraint.ConstraintLayout
         android:id="@+id/constraintLayout"
@@ -25,17 +24,17 @@
         android:background="#7b000000"
         app:layout_constraintBottom_toBottomOf="parent"
         tools:ignore="MissingConstraints"
-        tools:layout_editor_absoluteX="0dp">
+        tools:layout_editor_absoluteX="32dp">
 
         <Button
             android:id="@+id/videoBtn"
             android:layout_width="60dp"
             android:layout_height="60dp"
-            android:layout_marginEnd="24dp"
             android:layout_marginStart="24dp"
             android:layout_marginTop="16dp"
+            android:layout_marginEnd="24dp"
             android:layout_weight="1"
-            android:background="@drawable/video_btn"
+            android:background="@mipmap/video_btn"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
@@ -44,72 +43,94 @@
             android:id="@+id/photoBtn"
             android:layout_width="50dp"
             android:layout_height="50dp"
-            android:layout_marginBottom="8dp"
-            android:layout_marginEnd="8dp"
             android:layout_marginStart="8dp"
+            android:layout_marginEnd="8dp"
+            android:layout_marginBottom="8dp"
             android:layout_weight="1"
-            android:background="@drawable/photo_btn"
+            android:background="@mipmap/photo_btn"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toStartOf="@+id/videoBtn"
             app:layout_constraintHorizontal_bias="0.45"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
-        <Button
-            android:id="@+id/camBtn"
+        <!--<Button
+            android:id="@+id/videoBtn"
             android:layout_width="50dp"
             android:layout_height="50dp"
-            android:layout_marginBottom="8dp"
-            android:layout_marginEnd="8dp"
             android:layout_marginStart="8dp"
+            android:layout_marginEnd="8dp"
+            android:layout_marginBottom="8dp"
             android:layout_weight="1"
-            android:background="@drawable/cam_btn"
+            android:background="@mipmap/video_btn"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintHorizontal_bias="0.65"
-            app:layout_constraintStart_toEndOf="@+id/videoBtn"
-            app:layout_constraintTop_toTopOf="parent" />
+            app:layout_constraintStart_toEndOf="@+id/camBtn"
+            app:layout_constraintTop_toTopOf="parent" />-->
 
         <TextView
             android:id="@+id/textView"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="8dp"
-            android:layout_marginEnd="8dp"
             android:layout_marginStart="8dp"
             android:layout_marginTop="8dp"
+            android:layout_marginEnd="8dp"
+            android:layout_marginBottom="8dp"
             android:layout_weight="1"
-            android:text="@string/cam_video_info"
+            android:text="@string/cam_video_info2"
             android:textAlignment="viewEnd"
-            android:textSize="8dp"
+            android:textColor="@android:color/white"
+            android:textSize="12sp"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/camBtn" />
+            app:layout_constraintTop_toBottomOf="@+id/videoBtn" />
     </android.support.constraint.ConstraintLayout>
 
     <TextView
-        android:id="@+id/camCount"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="20dp"
-        android:layout_marginEnd="8dp"
-        android:text="0/5"
+        android:id="@+id/camCount2"
+        android:layout_width="55dp"
+        android:layout_height="19dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginBottom="8dp"
+        android:text="0/20s"
+        android:textColor="@android:color/white"
         app:layout_constraintBottom_toTopOf="@+id/constraintLayout"
-        app:layout_constraintEnd_toEndOf="parent" />
+        app:layout_constraintStart_toStartOf="@+id/surface_view2" />
 
     <Button
         android:id="@+id/saveBtn"
-        android:layout_width="150dp"
+        android:layout_width="80dp"
         android:layout_height="30dp"
-        android:layout_marginBottom="12dp"
         android:layout_marginEnd="8dp"
-        android:layout_marginStart="8dp"
+        android:layout_marginBottom="12dp"
         android:background="@drawable/round_button"
         android:text="@string/saveCam"
         android:textColor="@android:color/black"
         app:layout_constraintBottom_toTopOf="@+id/constraintLayout"
+        app:layout_constraintEnd_toEndOf="@+id/surfaceView2" />
+
+    <Button
+        android:id="@+id/skipBtn"
+        android:layout_width="80dp"
+        android:layout_height="30dp"
+        android:layout_marginEnd="8dp"
+        android:layout_marginBottom="12dp"
+        android:background="@drawable/round_button_next"
+        android:text="@string/skipCam"
+        android:textColor="#ffffff"
+        app:layout_constraintBottom_toTopOf="@+id/constraintLayout"
+        app:layout_constraintEnd_toStartOf="@+id/saveBtn" />
+
+    <Button
+        android:id="@+id/cam_toggle"
+        android:layout_width="60dp"
+        android:layout_height="60dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="8dp"
+        android:background="@mipmap/cam_toggle"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="@+id/surfaceView"
-        tools:ignore="MissingConstraints" />
+        app:layout_constraintTop_toTopOf="parent" />
+
 </android.support.constraint.ConstraintLayout>

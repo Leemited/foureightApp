@@ -7,12 +7,12 @@
     android:layout_height="match_parent">
 
     <SurfaceView
-        android:id="@+id/surfaceView"
+        android:id="@+id/surfaceView2"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
     <TextureView
-        android:id="@+id/surface_view"
+        android:id="@+id/surface_view2"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
@@ -21,14 +21,14 @@
         android:layout_width="119dp"
         android:layout_height="359dp"
         android:background="#7b000000"
-        app:layout_constraintBottom_toTopOf="@+id/surfaceView"
+        app:layout_constraintBottom_toTopOf="@+id/surfaceView2"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintVertical_bias="0.0"
         tools:ignore="MissingConstraints">
 
         <Button
-            android:id="@+id/camBtn"
+            android:id="@+id/videoBtn"
             android:layout_width="60dp"
             android:layout_height="60dp"
             android:layout_marginTop="8dp"
@@ -53,9 +53,9 @@
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/camBtn" />
+            app:layout_constraintTop_toBottomOf="@+id/videoBtn" />
 
-        <Button
+        <!--<Button
             android:id="@+id/videoBtn"
             android:layout_width="50dp"
             android:layout_height="50dp"
@@ -68,7 +68,7 @@
             app:layout_constraintBottom_toTopOf="@+id/camBtn"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
+            app:layout_constraintTop_toTopOf="parent" />-->
 
         <TextView
             android:id="@+id/textView"
@@ -79,7 +79,7 @@
             android:layout_weight="1"
             android:fontFamily="sans-serif-condensed"
             android:rotation="0"
-            android:text="@string/cam_video_info"
+            android:text="@string/cam_video_info2"
             android:textAlignment="viewEnd"
             android:textColor="@android:color/background_light"
             android:textSize="12sp"
@@ -96,7 +96,7 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="8dp"
         android:layout_marginBottom="8dp"
-        android:text="0/5"
+        android:text="0/20s"
         android:textColor="@android:color/background_light"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent" />
