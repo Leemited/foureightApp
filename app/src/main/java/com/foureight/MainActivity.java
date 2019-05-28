@@ -3,6 +3,7 @@ package com.foureight;
 import android.app.AlertDialog;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
+import android.content.ActivityNotFoundException;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
@@ -11,9 +12,6 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.hardware.input.InputManager;
-import android.inputmethodservice.KeyboardView;
 import android.location.Location;
 import android.location.LocationManager;
 import android.media.AudioAttributes;
@@ -23,7 +21,8 @@ import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
-import android.provider.MediaStore;
+import android.os.Message;
+import android.provider.Browser;
 import android.provider.Settings;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.NotificationCompat;
@@ -33,9 +32,6 @@ import android.text.TextUtils;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
-import android.view.inputmethod.BaseInputConnection;
-import android.view.inputmethod.EditorInfo;
-import android.view.inputmethod.InputConnection;
 import android.view.inputmethod.InputMethodManager;
 import android.webkit.ConsoleMessage;
 import android.webkit.CookieManager;
@@ -44,28 +40,22 @@ import android.webkit.JavascriptInterface;
 import android.webkit.ValueCallback;
 import android.webkit.WebBackForwardList;
 import android.webkit.WebChromeClient;
-import android.webkit.WebResourceError;
-import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
+import android.widget.ProgressBar;
 import android.widget.Toast;
 
 import com.google.firebase.iid.FirebaseInstanceId;
 
 import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.net.URLDecoder;
+import java.net.URISyntaxException;
 import java.net.URLEncoder;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Date;
-
-import gun0912.tedbottompicker.TedBottomPicker;
 
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "MAINACITIVITYSS";
@@ -97,6 +87,10 @@ public class MainActivity extends AppCompatActivity {
     private NotificationManager notificationManager;
     private NotificationCompat.Builder notificationBuilder;
 
+    private ProgressBar progressBar;
+
+    private MyFirebaseMessagingService fcmService;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -122,8 +116,6 @@ public class MainActivity extends AppCompatActivity {
         }
 
         regId = FirebaseInstanceId.getInstance().getToken();
-
-        Log.d(TAG, "onCreate: " + regId);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             // Create channel to show notifications.
@@ -205,7 +197,8 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
-        mWebview = (WebView) findViewById(R.id.webview);
+        progressBar = findViewById(R.id.progressBar);
+        mWebview = findViewById(R.id.webview);
 
         mWebview.setWebChromeClient(new CustomWebChromeClient());
         mWebview.setWebViewClient(new CustomWebClient());
@@ -307,9 +300,11 @@ public class MainActivity extends AppCompatActivity {
     private class AndroidBridge {
         @JavascriptInterface
         public void copyLink(String link){
+            Log.d(TAG, "copyLink: " + link);
             ClipboardManager clipboardManager = (ClipboardManager)getSystemService(CLIPBOARD_SERVICE);
             ClipData clipData = ClipData.newPlainText("48링크", link);
             clipboardManager.setPrimaryClip(clipData);
+
         }
 
         @JavascriptInterface
@@ -479,7 +474,8 @@ public class MainActivity extends AppCompatActivity {
                 if (backUrl.contains("login") != true) {
                     //Log.d(TAG, "onKeyDown: " + mWebview.getUrl());
                     if (mWebview.getUrl().contains("#modal") == true) {
-                        mWebview.loadUrl("javascript:modalclose()");
+                        Log.d(TAG, "onKeyDown: " + mWebview.getUrl());
+                        mWebview.loadUrl("javascript:modalClose()");
                         mWebview.goBackOrForward(-1);
                     } else if (mWebview.getUrl().contains("#menu") == true) {
                         mWebview.loadUrl("javascript:closeMenu()");
@@ -546,7 +542,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private class CustomWebChromeClient extends WebChromeClient {
-        @Override
+         @Override
         public boolean onConsoleMessage(ConsoleMessage cm) {
             Log.e("raon", cm.message() + " -- From Line " + cm.lineNumber() + "of" + cm.sourceId());
             return true;
@@ -684,6 +680,8 @@ public class MainActivity extends AppCompatActivity {
 
     private class CustomWebClient extends WebViewClient {
 
+
+
         @Override
         public void onUnhandledKeyEvent(WebView view, KeyEvent event) {
             Log.d(TAG, "onUnhandledKeyEvent: " + view.getUrl());
@@ -709,6 +707,15 @@ public class MainActivity extends AppCompatActivity {
                 finish();
                 Toast.makeText(MainActivity.this,"현재 인터넷이 연결되어 있지 않아 앱을 종료 하였습니다.",Toast.LENGTH_SHORT).show();
             }
+
+            if (url != null && url.indexOf("search.naver") > -1) {
+                Intent i = new Intent(Intent.ACTION_VIEW);
+                i.setPackage("com.android.chrome");
+                i.setData(Uri.parse(url));
+                startActivity(i);
+                return true;
+            }
+
             if (url.startsWith("tel:")) {
                 Intent intent = new Intent(Intent.ACTION_DIAL, Uri.parse(url));
                 startActivity(intent);
@@ -735,11 +742,167 @@ public class MainActivity extends AppCompatActivity {
                     e.printStackTrace();
                 }
             }
+
+            if (url.startsWith("http://") || url.startsWith("https://")) {
+                view.loadUrl(url);
+                return true;
+            }
+
+            if ((url.startsWith("http://") || url.startsWith("https://")) && (url.contains("market.android.com") || url.contains("m.ahnlab.com/kr/site/download"))) {
+                Uri uri = Uri.parse(url);
+                Intent intent = new Intent(Intent.ACTION_VIEW, uri);
+                try {
+                    startActivity(intent);
+                    return true;
+                } catch (ActivityNotFoundException e) {
+                    return false;
+                }
+            } else if (url != null
+                    && (url.contains("vguard") || url.contains("droidxantivirus") || url.contains("smhyundaiansimclick://")
+                    || url.contains("smshinhanansimclick://") || url.contains("smshinhancardusim://") || url.contains("smartwall://") || url.contains("appfree://")
+                    || url.contains("v3mobile") || url.endsWith(".apk") || url.contains("market://") || url.contains("ansimclick")
+                    || url.contains("market://details?id=com.shcard.smartpay") || url.contains("shinhan-sr-ansimclick://"))) {
+                Intent intent = null;
+                // 인텐트 정합성 체크
+                try {
+                    intent = Intent.parseUri(url, Intent.URI_INTENT_SCHEME);
+                    Log.e("getScheme :", intent.getScheme());
+                    Log.e("getDataString :", intent.getDataString());
+                } catch (URISyntaxException ex) {
+                    Log.e("Browser", "Bad URI " + url + ":" + ex.getMessage());
+                    return false;
+                }
+                try {
+                    boolean retval = true;
+//chrome 버젼 방식
+                    if (url.startsWith("intent")) {
+// 앱설치 체크를 합니다.
+                        if (getPackageManager().resolveActivity(intent, 0) == null) {
+                            String packagename = intent.getPackage();
+                            if (packagename != null) {
+                                Uri uri = Uri.parse("market://search?q=pname:" + packagename);
+                                intent = new Intent(Intent.ACTION_VIEW, uri);
+                                startActivity(intent);
+                                retval = true;
+                            }
+                        } else {
+                            intent.addCategory(Intent.CATEGORY_BROWSABLE);
+                            intent.setComponent(null);
+                            try {
+                                if (startActivityIfNeeded(intent, -1)) {
+                                    retval = true;
+                                }
+                            } catch (ActivityNotFoundException ex) {
+                                retval = false;
+                            }
+                        }
+                    } else { // 구 방식
+                        Uri uri = Uri.parse(url);
+                        intent = new Intent(Intent.ACTION_VIEW, uri);
+                        startActivity(intent);
+                        retval = true;
+                    }
+                    return retval;
+                } catch (ActivityNotFoundException e) {
+                    Log.e("error ===>", e.getMessage());
+                    e.printStackTrace();
+                    return false;
+                }
+            }
+
+            // 계좌이체 커스텀 스키마
+            if (url.startsWith("smartxpay-transfer://")) {
+                boolean isatallFlag = isPackageInstalled(getApplicationContext(), "kr.co.uplus.ecredit");
+                if (isatallFlag) {
+                    boolean override = false;
+                    Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+                    intent.addCategory(Intent.CATEGORY_BROWSABLE);
+                    intent.putExtra(Browser.EXTRA_APPLICATION_ID, getPackageName());
+                    try {
+                        startActivity(intent);
+                        override = true;
+                    } catch (ActivityNotFoundException ex) {
+                    }
+                    return override;
+                } else {
+                    showAlert("확인버튼을 누르시면 구글플레이로 이동합니다.", "확인", new DialogInterface.OnClickListener() {
+                        public void onClick(DialogInterface dialog, int which) {
+                            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(("market://details?id=kr.co.uplus.ecredit")));
+                            intent.addCategory(Intent.CATEGORY_BROWSABLE);
+                            intent.putExtra(Browser.EXTRA_APPLICATION_ID, getPackageName());
+                            startActivity(intent);
+                            overridePendingTransition(0, 0);
+                        }
+                    } , "취소", new DialogInterface.OnClickListener() {
+                        public void onClick(DialogInterface dialog, int which) {
+                            dialog.cancel();
+                        }
+                    });
+                    return true;
+                }
+            }else if(url.startsWith("lguthepay-xpay://")) {
+                boolean isatallFlag = isPackageInstalled(getApplicationContext(), "com.lguplus.paynow");
+                if (isatallFlag) {
+                    boolean override = false;
+                    Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+                    intent.addCategory(Intent.CATEGORY_BROWSABLE);
+                    intent.putExtra(Browser.EXTRA_APPLICATION_ID, getPackageName());
+
+                    try {
+                        startActivity(intent);
+                        override = true;
+                    } catch (ActivityNotFoundException ex) {
+                    }
+                    return override;
+                } else {
+                    Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(("market://details?id=com.lguplus.paynow")));
+                    intent.addCategory(Intent.CATEGORY_BROWSABLE);
+                    intent.putExtra(Browser.EXTRA_APPLICATION_ID, getPackageName());
+                    startActivity(intent);
+                    overridePendingTransition(0, 0);
+                    return true;
+                }
+            }
+
+            // 모바일ISP 커스텀 스키마
+            if (url.startsWith("ispmobile://")) {
+                boolean isatallFlag = isPackageInstalled(getApplicationContext(), "kvp.jjy.MispAndroid320");
+                if (isatallFlag) {
+                    boolean override = false;
+                    Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+                    intent.addCategory(Intent.CATEGORY_BROWSABLE);
+                    intent.putExtra(Browser.EXTRA_APPLICATION_ID, getPackageName());
+                    try {
+                        startActivity(intent);
+                        override = true;
+                    } catch (ActivityNotFoundException ex) {
+                    }
+                    return override;
+                } else {
+                    showAlert("확인버튼을 누르시면 구글플레이로 이동합니다.", "확인", new DialogInterface.OnClickListener() {
+                        public void onClick(DialogInterface dialog, int which) {
+                            mWebview.loadUrl("http://mobile.vpay.co.kr/jsp/MISP/andown.jsp");
+                        }
+                    } , "취소", new DialogInterface.OnClickListener() {
+                        public void onClick(DialogInterface dialog, int which) {
+                            dialog.cancel();
+                        }
+                    });
+                    return true;
+                }
+            }
+
             return false;
         }
 
         @Override
+        public void onPageStarted(WebView view, String url, Bitmap favicon) {
+            progressBar.setVisibility(View.VISIBLE);
+        }
+
+        @Override
         public void onPageFinished(WebView view, String url) {
+            progressBar.setVisibility(View.GONE);
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
                 CookieSyncManager.getInstance().sync();
             } else {
@@ -747,6 +910,25 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
+    }
+
+    // App 체크 메소드 // 존재:true, 존재하지않음:false
+    public static boolean isPackageInstalled(Context ctx, String pkgName) {
+        try {
+            ctx.getPackageManager().getPackageInfo(pkgName, PackageManager.GET_ACTIVITIES);
+        } catch (PackageManager.NameNotFoundException e) {
+            e.printStackTrace();
+            return false;
+        }
+        return true;
+    }
+
+    public void showAlert(String message, String positiveButton, DialogInterface.OnClickListener positiveListener, String negativeButton, DialogInterface.OnClickListener negativeListener) {
+        AlertDialog.Builder alert = new AlertDialog.Builder(this);
+        alert.setMessage(message);
+        alert.setPositiveButton(positiveButton, positiveListener);
+        alert.setNegativeButton(negativeButton, negativeListener);
+        alert.show();
     }
 
     private File createImageFile() throws IOException{
@@ -830,9 +1012,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public Location getLocation(){
-
-
-
         isGetLocation = true;
         LocationImpl myLoc = new LocationImpl();
         locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
@@ -936,4 +1115,5 @@ public class MainActivity extends AppCompatActivity {
         return false;
         //return manager.getActiveNetworkInfo() != null;
     }
+
 }

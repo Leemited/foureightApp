@@ -103,7 +103,7 @@ public class CameraActivity extends AppCompatActivity implements SurfaceHolder.C
         File dir = new File(sd);
 
         String[] children = dir.list();
-        Log.d(TAG, "onCreate: "+children.length);
+        //Log.d(TAG, "onCreate: "+children.length);
         if (children != null) {
             for (int i=0; i<children.length; i++) {
                 String filename = children[i];

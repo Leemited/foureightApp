@@ -89,7 +89,7 @@ public class SplashActivity extends AppCompatActivity {
                     };
                     TedPermission.with(SplashActivity.this)
                             .setPermissionListener(permissionlistener)
-                            .setDeniedMessage("If you reject permission,you can not use this service\n\nPlease turn on permissions at [Setting] > [Permission]")
+                            .setDeniedMessage("[설정] > [권한] 에서 권한을 허용할 수 있습니다.")
                             .setPermissions(Manifest.permission.CAMERA, Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.RECORD_AUDIO, Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE)
                             .check();
                 }

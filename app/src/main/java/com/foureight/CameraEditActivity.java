@@ -222,7 +222,7 @@ public class CameraEditActivity extends AppCompatActivity implements SurfaceHold
                                         BitmapFactory.Options options = new BitmapFactory.Options();
                                         options.inSampleSize = 4;
                                         //Bitmap image = MediaStore.Images.Media.getBitmap(getContentResolver(), uriList.get(i));
-                                        Bitmap image = BitmapFactory.decodeFile(filePath,options);
+                                        Bitmap image = BitmapFactory.decodeStream(getContentResolver().openInputStream(uriList.get(i)));
                                         Log.d(TAG, "onImagesSelected: image : " +image);
 
                                         Bitmap resizeImg = Bitmap.createScaledBitmap(image, previewSize.width, previewSize.height,true);
