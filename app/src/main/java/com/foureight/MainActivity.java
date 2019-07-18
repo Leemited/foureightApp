@@ -96,6 +96,8 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        PRRUN.bAppRunned = true;
+
         mb_id=getIntent().getStringExtra("mb_id");
         title=getIntent().getStringExtra("title");
         type1=getIntent().getStringExtra("type1");
@@ -215,6 +217,9 @@ public class MainActivity extends AppCompatActivity {
 
         }
         WebSettings webSettings = mWebview.getSettings();
+        webSettings.setRenderPriority(WebSettings.RenderPriority.HIGH);
+        webSettings.setLayoutAlgorithm(WebSettings.LayoutAlgorithm.SINGLE_COLUMN);
+        webSettings.setEnableSmoothTransition(true);
         webSettings.setJavaScriptEnabled(true);
         webSettings.setJavaScriptCanOpenWindowsAutomatically(true);
         webSettings.setSaveFormData(false);
@@ -282,7 +287,7 @@ public class MainActivity extends AppCompatActivity {
 
         Log.d(TAG, "onCreate: url = " + url + " // "+ urlTitle + "// fcmUrl : "+ fcmUrl);
 
-        mWebview.clearCache(true);
+        //mWebview.clearCache(true);
 
         mWebview.loadUrl(url);
 
@@ -472,9 +477,8 @@ public class MainActivity extends AppCompatActivity {
                 Log.d(TAG, "뒤로가기: " + backUrl + "//" + curruntUrl);
 
                 if (backUrl.contains("login") != true) {
-                    //Log.d(TAG, "onKeyDown: " + mWebview.getUrl());
+                    
                     if (mWebview.getUrl().contains("#modal") == true) {
-                        Log.d(TAG, "onKeyDown: " + mWebview.getUrl());
                         mWebview.loadUrl("javascript:modalClose()");
                         mWebview.goBackOrForward(-1);
                     } else if (mWebview.getUrl().contains("#menu") == true) {
@@ -490,6 +494,7 @@ public class MainActivity extends AppCompatActivity {
                         mWebview.loadUrl("javascript:hidePreview()");
                         mWebview.goBackOrForward(-1);
                     } else if (mWebview.getUrl().contains("#detailview") == true) {
+                        Log.d(TAG, "onKeyDown: Action");
                         mWebview.loadUrl("javascript:hideDetail()");
                         mWebview.goBackOrForward(-1);
                     } else if (mWebview.getUrl().contains("#blind") == true) {
@@ -498,8 +503,14 @@ public class MainActivity extends AppCompatActivity {
                     } else if (mWebview.getUrl().contains("#category") == true) {
                         mWebview.loadUrl("javascript:cateClose()");
                         mWebview.goBackOrForward(-1);
+                    }  else if (mWebview.getUrl().contains("#talkView") == true) {
+                        mWebview.loadUrl("javascript:modalCloseTalk()");
+                        mWebview.goBackOrForward(-1);
+                    } else if (mWebview.getUrl().contains("#mapView") == true) {
+                        mWebview.loadUrl("javascript:mapViewClose()");
+                        mWebview.goBackOrForward(-1);
                     } else {
-                        if(curruntUrl.contains("cafe24.com/index.php") == true || curruntUrl.equals("http://mave01.cafe24.com/") == true){
+                        if(curruntUrl.contains("cafe24.com/index.php") == true || (curruntUrl.equals("http://mave01.cafe24.com/") == true || curruntUrl.equals("http://mave01.cafe24.com/#") == true)){
                             long tempTime = System.currentTimeMillis();
                             long intervalTime = tempTime - backPressedTime;
 
@@ -687,7 +698,8 @@ public class MainActivity extends AppCompatActivity {
             Log.d(TAG, "onUnhandledKeyEvent: " + view.getUrl());
             if(event.getKeyCode() == 66 && view.getUrl().contains("my_location.php")){
                 view.loadUrl("javascript:mapKeySet()");
-            }if(event.getKeyCode() == 66 && (view.getUrl().contains("http://mave01.cafe24.com/#") || view.getUrl().contains("http://mave01.cafe24.com/index.php"))){
+            }
+            if(event.getKeyCode() == 66 && view.getUrl().contains("#writes")){
                 view.loadUrl("javascript:fnOnCam()");
             }
             //super.onUnhandledKeyEvent(view, event);
@@ -726,6 +738,7 @@ public class MainActivity extends AppCompatActivity {
                 startActivity(intent);
                 return true;
             }
+
             if (url.startsWith("intent:")) {
                 try {
                     Intent intent = Intent.parseUri(url, Intent.URI_INTENT_SCHEME);
@@ -1068,6 +1081,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onDestroy() {
         InputMethodManager inputMethodManager = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
         inputMethodManager.hideSoftInputFromWindow(mWebview.getWindowToken(),0);
+        PRRUN.bAppRunned = false;
         super.onDestroy();
     }
 
@@ -1079,6 +1093,8 @@ public class MainActivity extends AppCompatActivity {
         }
         InputMethodManager inputMethodManager = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
         inputMethodManager.hideSoftInputFromWindow(mWebview.getWindowToken(),0);
+        Log.d(TAG, "onPause: ");
+        PRRUN.bAppRunned = false;
     }
 
     @Override
@@ -1089,6 +1105,8 @@ public class MainActivity extends AppCompatActivity {
         }
         InputMethodManager inputMethodManager = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
         inputMethodManager.hideSoftInputFromWindow(mWebview.getWindowToken(),0);
+        Log.d(TAG, "onResume: ");
+        PRRUN.bAppRunned = true;
     }
 
     /*

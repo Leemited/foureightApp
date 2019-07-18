@@ -29,6 +29,7 @@ import android.os.Bundle;
 import android.os.PowerManager;
 import android.support.v4.app.NotificationCompat;
 import android.util.Log;
+import android.widget.Toast;
 
 import com.firebase.jobdispatcher.FirebaseJobDispatcher;
 import com.firebase.jobdispatcher.GooglePlayDriver;
@@ -121,82 +122,84 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
      * @param messageBody FCM message body received.
      */
     private void sendNotification(String title, String messageBody, CharSequence longMessage, String url,String channelId,String channelName, String imgurlstr) {
-        Intent intent = new Intent(this, MainActivity.class);
-        intent.addFlags(Intent.FLAG_ACTIVITY_MULTIPLE_TASK);
-        Bundle bundle = new Bundle();
-        bundle.putString("url", url);
-        intent.putExtras(bundle);
-        PendingIntent pendingIntent = PendingIntent.getActivity(this, 0 /* Request code */, intent,
-                PendingIntent.FLAG_UPDATE_CURRENT);
-        try {
-            URL photos = new URL(imgurlstr);
-            HttpURLConnection connection = (HttpURLConnection) photos.openConnection();
-            connection.setDoInput(true);
-            connection.connect();
-            InputStream bis = connection.getInputStream();
-            bigPicture = BitmapFactory.decodeStream(bis);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        if(PRRUN.bAppRunned==false) {
+            Intent intent = new Intent(this, MainActivity.class);
+            intent.addFlags(Intent.FLAG_ACTIVITY_MULTIPLE_TASK);
+            Bundle bundle = new Bundle();
+            bundle.putString("url", url);
+            intent.putExtras(bundle);
+            PendingIntent pendingIntent = PendingIntent.getActivity(this, 0 /* Request code */, intent,
+                    PendingIntent.FLAG_UPDATE_CURRENT);
+            try {
+                URL photos = new URL(imgurlstr);
+                HttpURLConnection connection = (HttpURLConnection) photos.openConnection();
+                connection.setDoInput(true);
+                connection.connect();
+                InputStream bis = connection.getInputStream();
+                bigPicture = BitmapFactory.decodeStream(bis);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
 
-        //String channelId = getString(R.string.default_notification_channel_id);
-        Uri defaultSoundUri= RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
-        NotificationCompat.Builder notificationBuilder;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            notificationBuilder =
-                    new NotificationCompat.Builder(this, channelId);
+            //String channelId = getString(R.string.default_notification_channel_id);
+            Uri defaultSoundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
+            NotificationCompat.Builder notificationBuilder;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                notificationBuilder =
+                        new NotificationCompat.Builder(this, channelId);
+            } else {
+                notificationBuilder =
+                        new NotificationCompat.Builder(this);
+
+            }
+            notificationBuilder.setSmallIcon(R.drawable.ic_stat_name)
+                    .setContentTitle(title)
+                    .setContentText(messageBody)
+                    .setContentIntent(pendingIntent)
+                    .setAutoCancel(true)
+                    .setSound(defaultSoundUri)
+                    .setVibrate(new long[]{100, 0, 0, 400, 0, 0, 100, 0, 0, 500, 0, 0});
+
+
+            NotificationManager notificationManager =
+                    (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+
+            notificationBuilder.setStyle(new NotificationCompat.BigTextStyle().bigText(longMessage));
+
+            if (imgurlstr != null) {
+                notificationBuilder.setLargeIcon(bigPicture);
+            }
+
+            PowerManager pm = (PowerManager) this.getSystemService(Context.POWER_SERVICE);
+            PowerManager.WakeLock wakelock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP, "TAG");
+            wakelock.acquire(5000);
+
+            //메인액티비티의 웹뷰 정보?
+
+            notificationManager.notify(0, notificationBuilder.build());
+
+            SharedPreferences pref = getSharedPreferences("badge_count", MODE_PRIVATE);
+
+            int badge = pref.getInt("badge_count", 0);
+
+            if (badge > 0) {
+                badgeCount = badge + 1;
+            } else {
+                badgeCount++;
+            }
+
+            Intent badgeIntent = new Intent("android.intent.action.BADGE_COUNT_UPDATE");
+            badgeIntent.putExtra("badge_count", badgeCount);
+            badgeIntent.putExtra("badge_count_package_name", getPackageName());
+            badgeIntent.putExtra("badge_count_class_name", SplashActivity.class.getName());
+            sendBroadcast(badgeIntent);
+
+            SharedPreferences.Editor editor = pref.edit();
+            editor.putInt("badgeCount", badgeCount);
+            editor.commit();
         }else{
-            notificationBuilder =
-                    new NotificationCompat.Builder(this);
 
         }
-        notificationBuilder.setSmallIcon(R.drawable.ic_stat_name)
-                .setContentTitle(title)
-                .setContentText(messageBody)
-                .setContentIntent(pendingIntent)
-                .setAutoCancel(true)
-                .setSound(defaultSoundUri)
-                .setVibrate(new long[]{100,0,0,400,0,0,100,0,0,500,0,0});
-
-
-        NotificationManager notificationManager =
-                (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-
-        notificationBuilder.setStyle(new NotificationCompat.BigTextStyle().bigText(longMessage));
-
-        if(imgurlstr != null) {
-            notificationBuilder.setLargeIcon(bigPicture);
-        }
-
-        PowerManager pm = (PowerManager) this.getSystemService(Context.POWER_SERVICE);
-        PowerManager.WakeLock wakelock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP, "TAG");
-        wakelock.acquire(5000);
-
-        //메인액티비티의 웹뷰 정보?
-
-        notificationManager.notify(0 , notificationBuilder.build());
-
-        SharedPreferences pref = getSharedPreferences("badge_count",MODE_PRIVATE);
-
-        int badge = pref.getInt("badge_count",0);
-
-        if(badge > 0) {
-            badgeCount = badge + 1;
-        }else{
-            badgeCount++;
-        }
-
-        Log.d(TAG, "sendNotification: count?? " + badgeCount);
-
-        Intent badgeIntent = new Intent("android.intent.action.BADGE_COUNT_UPDATE");
-        badgeIntent.putExtra("badge_count",badgeCount);
-        badgeIntent.putExtra("badge_count_package_name", getPackageName());
-        badgeIntent.putExtra("badge_count_class_name",SplashActivity.class.getName());
-        sendBroadcast(badgeIntent);
-
-        SharedPreferences.Editor editor = pref.edit();
-        editor.putInt("badgeCount", badgeCount);
-        editor.commit();
     }
 
 }
