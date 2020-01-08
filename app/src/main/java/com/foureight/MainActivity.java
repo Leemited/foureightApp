@@ -1,5 +1,6 @@
 package com.foureight;
 
+import android.app.ActivityManager;
 import android.app.AlertDialog;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -21,7 +22,7 @@ import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
-import android.os.Message;
+import android.os.Handler;
 import android.provider.Browser;
 import android.provider.Settings;
 import android.support.v4.app.ActivityCompat;
@@ -43,6 +44,7 @@ import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.ProgressBar;
 import android.widget.Toast;
@@ -75,11 +77,12 @@ public class MainActivity extends AppCompatActivity {
     boolean isNetworkEnabled = false;
     boolean isGetLocation = false;
 
+    private String macId;
     public String regId;
 
     public String url = "";
     public String fcmUrl = "";
-    private String mb_id,title,cate1,cate2,type1,type2,skip,filename="",videoname="",wr_price,wr_price2,index,pd_price_type;
+    private String mb_id, title, cate1, cate2, type1, type2, skip, filename = "", videoname = "", wr_price, wr_price2, index, pd_price_type, sc_id = "";
     String[] files;
 
     private final long FINISH_INTERVAL_TIME = 2000;
@@ -89,8 +92,6 @@ public class MainActivity extends AppCompatActivity {
 
     private ProgressBar progressBar;
 
-    private MyFirebaseMessagingService fcmService;
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -98,97 +99,96 @@ public class MainActivity extends AppCompatActivity {
 
         PRRUN.bAppRunned = true;
 
-        mb_id=getIntent().getStringExtra("mb_id");
-        title=getIntent().getStringExtra("title");
-        type1=getIntent().getStringExtra("type1");
-        type2=getIntent().getStringExtra("type2");
-        cate1=getIntent().getStringExtra("cate1");
-        cate2=getIntent().getStringExtra("cate2");
-        wr_price=getIntent().getStringExtra("wr_price");
-        wr_price2=getIntent().getStringExtra("wr_price2");
-        pd_price_type=getIntent().getStringExtra("pd_price_type");
-        index=getIntent().getStringExtra("index");
-        if(getIntent().getStringExtra("skip")!=null) {
+        mb_id = getIntent().getStringExtra("mb_id");
+        title = getIntent().getStringExtra("title");
+        type1 = getIntent().getStringExtra("type1");
+        type2 = getIntent().getStringExtra("type2");
+        cate1 = getIntent().getStringExtra("cate1");
+        cate2 = getIntent().getStringExtra("cate2");
+        wr_price = getIntent().getStringExtra("wr_price");
+        wr_price2 = getIntent().getStringExtra("wr_price2");
+        pd_price_type = getIntent().getStringExtra("pd_price_type");
+        index = getIntent().getStringExtra("index");
+        if (getIntent().getStringExtra("skip") != null) {
             skip = getIntent().getStringExtra("skip");
         }
         filename = getIntent().getStringExtra("filename");
         videoname = getIntent().getStringExtra("videoname");
-        if(filename != null) {
+        if (filename != null) {
             files = filename.split(",");
         }
 
         regId = FirebaseInstanceId.getInstance().getToken();
-
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             // Create channel to show notifications.
-            String channelId  = getString(R.string.default_notification_channel_id);
+            String channelId = getString(R.string.default_notification_channel_id);
             String channelName = getString(R.string.default_notification_channel_name);
             notificationManager =
                     getSystemService(NotificationManager.class);
-            Uri defaultSoundUri= RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
+            Uri defaultSoundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
             AudioAttributes att = new AudioAttributes.Builder()
                     .setUsage(AudioAttributes.USAGE_NOTIFICATION)
                     .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
                     .build();
-            NotificationChannel defaultChannel = new NotificationChannel(channelId,channelName,NotificationManager.IMPORTANCE_HIGH);
-            defaultChannel.setSound(defaultSoundUri,att);
+            NotificationChannel defaultChannel = new NotificationChannel(channelId, channelName, NotificationManager.IMPORTANCE_HIGH);
+            defaultChannel.setSound(defaultSoundUri, att);
             defaultChannel.setDescription("기본알림에 관한 설정 입니다.");
             defaultChannel.enableVibration(true);
-            defaultChannel.setVibrationPattern(new long[]{100,0,0,400,0,0,100,0,0,500,0,0});
+            defaultChannel.setVibrationPattern(new long[]{0, 1500, 1000, 300, 3000, 200});
             notificationManager.createNotificationChannel(defaultChannel);
 
-            String commentId  = getString(R.string.comment_notification_channel_id);
+            String commentId = getString(R.string.comment_notification_channel_id);
             String commentName = getString(R.string.comment_notification_channel_name);
 
-            NotificationChannel commentChannel = new NotificationChannel(commentId,commentName,NotificationManager.IMPORTANCE_HIGH);
-            commentChannel.setSound(defaultSoundUri,att);
+            NotificationChannel commentChannel = new NotificationChannel(commentId, commentName, NotificationManager.IMPORTANCE_HIGH);
+            commentChannel.setSound(defaultSoundUri, att);
             commentChannel.setDescription("댓글에 관한 설정 입니다.");
             commentChannel.enableVibration(true);
-            commentChannel.setVibrationPattern(new long[]{100,0,0,400,0,0,100,0,0,500,0,0});
+            commentChannel.setVibrationPattern(new long[]{0, 1500, 1000, 300, 3000, 200});
 
             notificationManager.createNotificationChannel(commentChannel);
 
-            String buyId  = getString(R.string.buy_notification_channel_id);
+            String buyId = getString(R.string.buy_notification_channel_id);
             String buyName = getString(R.string.buy_notification_channel_name);
 
-            NotificationChannel buyChannel = new NotificationChannel(buyId,buyName,NotificationManager.IMPORTANCE_HIGH);
-            buyChannel.setSound(defaultSoundUri,att);
+            NotificationChannel buyChannel = new NotificationChannel(buyId, buyName, NotificationManager.IMPORTANCE_HIGH);
+            buyChannel.setSound(defaultSoundUri, att);
             buyChannel.setDescription("구매관련 설정 입니다.");
             buyChannel.enableVibration(true);
-            buyChannel.setVibrationPattern(new long[]{100,0,0,400,0,0,100,0,0,500,0,0});
+            buyChannel.setVibrationPattern(new long[]{0, 1500, 1000, 300, 3000, 200});
 
             notificationManager.createNotificationChannel(buyChannel);
 
-            String pricingId  = getString(R.string.pricing_notification_channel_id);
-            String pricingName= getString(R.string.pricing_notification_channel_name);
+            String pricingId = getString(R.string.pricing_notification_channel_id);
+            String pricingName = getString(R.string.pricing_notification_channel_name);
 
-            NotificationChannel pricingChannel = new NotificationChannel(pricingId,pricingName,NotificationManager.IMPORTANCE_HIGH);
-            pricingChannel.setSound(defaultSoundUri,att);
+            NotificationChannel pricingChannel = new NotificationChannel(pricingId, pricingName, NotificationManager.IMPORTANCE_HIGH);
+            pricingChannel.setSound(defaultSoundUri, att);
             pricingChannel.setDescription("제시/딜 관련 설정 입니다.");
             pricingChannel.enableVibration(true);
-            pricingChannel.setVibrationPattern(new long[]{100,0,0,400,0,0,100,0,0,500,0,0});
+            pricingChannel.setVibrationPattern(new long[]{0, 1500, 1000, 300, 3000, 200});
 
             notificationManager.createNotificationChannel(pricingChannel);
 
-            String chatId  = getString(R.string.chat_notification_channel_id);
+            String chatId = getString(R.string.chat_notification_channel_id);
             String chatName = getString(R.string.chat_notification_channel_name);
 
-            NotificationChannel chatChannel = new NotificationChannel(chatId,chatName,NotificationManager.IMPORTANCE_HIGH);
-            chatChannel.setSound(defaultSoundUri,att);
+            NotificationChannel chatChannel = new NotificationChannel(chatId, chatName, NotificationManager.IMPORTANCE_HIGH);
+            chatChannel.setSound(defaultSoundUri, att);
             chatChannel.setDescription("대화관련 설정 입니다.");
             chatChannel.enableVibration(true);
-            chatChannel.setVibrationPattern(new long[]{100,0,0});
+            chatChannel.setVibrationPattern(new long[]{0, 1500, 1000, 300, 3000, 200});
 
             notificationManager.createNotificationChannel(chatChannel);
 
-            String searchId  = getString(R.string.search_notification_channel_id);
+            String searchId = getString(R.string.search_notification_channel_id);
             String searchName = getString(R.string.search_notification_channel_name);
 
-            NotificationChannel searchChannel = new NotificationChannel(searchId,searchName,NotificationManager.IMPORTANCE_HIGH);
-            searchChannel.setSound(defaultSoundUri,att);
+            NotificationChannel searchChannel = new NotificationChannel(searchId, searchName, NotificationManager.IMPORTANCE_HIGH);
+            searchChannel.setSound(defaultSoundUri, att);
             searchChannel.setDescription("검색관련 설정 입니다.");
             searchChannel.enableVibration(true);
-            searchChannel.setVibrationPattern(new long[]{100,0,0,400,0,0,100,0,0,500,0,0});
+            searchChannel.setVibrationPattern(new long[]{0, 1500, 1000, 300, 3000, 200});
 
             notificationManager.createNotificationChannel(searchChannel);
         }
@@ -204,7 +204,9 @@ public class MainActivity extends AppCompatActivity {
 
         mWebview.setWebChromeClient(new CustomWebChromeClient());
         mWebview.setWebViewClient(new CustomWebClient());
-
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+            mWebview.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+        }
         if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
 
             mWebview.getSettings().setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
@@ -217,51 +219,66 @@ public class MainActivity extends AppCompatActivity {
 
         }
         WebSettings webSettings = mWebview.getSettings();
-        webSettings.setRenderPriority(WebSettings.RenderPriority.HIGH);
-        webSettings.setLayoutAlgorithm(WebSettings.LayoutAlgorithm.SINGLE_COLUMN);
-        webSettings.setEnableSmoothTransition(true);
+        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.O) {
+            webSettings.setRenderPriority(WebSettings.RenderPriority.HIGH);
+            webSettings.setLayoutAlgorithm(WebSettings.LayoutAlgorithm.SINGLE_COLUMN);
+            //webSettings.setEnableSmoothTransition(true);
+        }
         webSettings.setJavaScriptEnabled(true);
         webSettings.setJavaScriptCanOpenWindowsAutomatically(true);
         webSettings.setSaveFormData(false);
+        webSettings.setCacheMode(WebSettings.LOAD_DEFAULT);
+        //webSettings.setAppCacheEnabled(true);
         webSettings.setDomStorageEnabled(true);
         webSettings.setAllowFileAccess(true);
         webSettings.setAppCacheEnabled(true);
         webSettings.setLoadsImagesAutomatically(true);
         webSettings.setUseWideViewPort(false);
         webSettings.setGeolocationEnabled(true);
+        webSettings.setTextZoom(100);//폰트사이즈 고정
+
+
+        /*if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+            mWebview.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+        } else {
+            mWebview.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
+        }*/
+
         String userAgent = mWebview.getSettings().getUserAgentString();
-        webSettings.setUserAgentString(userAgent+"/foureight");
+        webSettings.setUserAgentString(userAgent + "/foureight");
         mWebview.addJavascriptInterface(new AndroidBridge(), "android");
-        url = "http://mave01.cafe24.com/";
+        url = "http://484848.co.kr/";
 
         String urlTitle = "";
         try {
-            if(title!=null) {
+            if (title != null) {
                 urlTitle = URLEncoder.encode(title, "UTF-8");
             }
         } catch (UnsupportedEncodingException e) {
             e.printStackTrace();
         }
 
-        if(files != null && files.length > 0){
+        if (files != null && files.length > 0) {
             Log.d(TAG, "files: " + files[0]);
-            url = url+"mobile/page/write.php?mb_id="+mb_id+"&wr_type1="+type1+"&pd_type2="+type2+"&cate1="+cate1+"&cate2="+cate2+"&filename="+filename+"&title="+urlTitle+"&wr_price="+wr_price+"&wr_price2="+wr_price2+"&pd_price_type="+pd_price_type;
+            url = url + "mobile/page/write.php?mb_id=" + mb_id + "&wr_type1=" + type1 + "&pd_type2=" + type2 + "&cate1=" + cate1 + "&cate2=" + cate2 + "&filename=" + filename + "&title=" + urlTitle + "&wr_price=" + wr_price + "&wr_price2=" + wr_price2 + "&pd_price_type=" + pd_price_type;
         }
-        if(videoname != null && filename != null){
-            url = url + "&videoname="+videoname;
-        }else if(videoname != null && filename == null){
-            url = url + "mobile/page/write.php?mb_id="+mb_id+"&wr_type1="+type1+"&pd_type2="+type2+"&title="+urlTitle+"&cate1="+cate1+"&cate2="+cate2+"&videoname="+videoname+"&wr_price="+wr_price+"&wr_price2="+wr_price2+"&pd_price_type="+pd_price_type;
+        if (videoname != null && filename != null) {
+            url = url + "&videoname=" + videoname;
+        } else if (videoname != null && filename == null) {
+            url = url + "mobile/page/write.php?mb_id=" + mb_id + "&wr_type1=" + type1 + "&pd_type2=" + type2 + "&title=" + urlTitle + "&cate1=" + cate1 + "&cate2=" + cate2 + "&videoname=" + videoname + "&wr_price=" + wr_price + "&wr_price2=" + wr_price2 + "&pd_price_type=" + pd_price_type;
         }
         location = getLocation();
 
+        //Log.d(TAG, "onCreate: " + location.getLatitude() + "//" + location.getLongitude());
+
         if (location != null && files == null) {
             url = url + "index.php?lat=" + location.getLatitude() + "&lng=" + location.getLongitude();
-        }else if(location != null && files != null){
+        } else if (location != null && files != null) {
             url = url + "&lat=" + location.getLatitude() + "&lng=" + location.getLongitude();
         }
-        if(index==null) {
+        if (index == null) {
             if (skip != null) {
-                url = "http://mave01.cafe24.com/mobile/page/write.php?mb_id=" + mb_id + "&wr_type1=" + type1 + "&pd_type2=" + type2 + "&title=" + urlTitle + "&cate1=" + cate1 + "&cate2=" + cate2 + "&wr_price=" + wr_price + "&wr_price2=" + wr_price2+"&pd_price_type="+pd_price_type;
+                url = "http://484848.co.kr/mobile/page/write.php?mb_id=" + mb_id + "&wr_type1=" + type1 + "&pd_type2=" + type2 + "&title=" + urlTitle + "&cate1=" + cate1 + "&cate2=" + cate2 + "&wr_price=" + wr_price + "&wr_price2=" + wr_price2 + "&pd_price_type=" + pd_price_type;
             }
         }
 
@@ -269,66 +286,144 @@ public class MainActivity extends AppCompatActivity {
         String mb_id_chk = pref.getString("mb_id", "");
 
         fcmUrl = getIntent().getStringExtra("url");
-        if(fcmUrl!=null){
+        if (fcmUrl != null) {
             url = fcmUrl;
         }
 
-        if(mb_id_chk!="" || mb_id_chk != null){
-            Log.d(TAG, "onCreate: login" );
-
-            if(url.indexOf("?")!=-1) {
+        if (mb_id_chk != "" || mb_id_chk != null) {
+            if (url.indexOf("?") != -1) {
                 url = url + "&app_mb_id=" + mb_id_chk;
-            }else {
+            } else {
                 url = url + "?app_mb_id=" + mb_id_chk;
             }
-        }else{
-            Log.d(TAG, "onCreate: notLogin");
+        } else {
         }
 
-        Log.d(TAG, "onCreate: url = " + url + " // "+ urlTitle + "// fcmUrl : "+ fcmUrl);
+        SharedPreferences macids = getSharedPreferences("deviceId", MODE_PRIVATE);
+        macId = macids.getString("macId", "");
+        if (macId.trim() == null || macId.trim() != "") {
+            url = url + "&device=android&mac=" + macId;
+        } else {
+            MacAddress mid = new MacAddress();
+            macId = mid.getMacAddress();
+            url = url + "&device=android&mac=" + macId;
+        }
 
-        //mWebview.clearCache(true);
+        SharedPreferences scids = getSharedPreferences("searchId", MODE_PRIVATE);
+        sc_id = scids.getString("sc_id", "");
+
+        if (sc_id.trim() != null || sc_id.trim() != "") {
+            if (!url.contains("sc_id")) {
+                if (url.contains("?")) {
+                    url += "&sc_id=" + sc_id;
+                } else {
+                    url += "?sc_id=" + sc_id;
+                }
+            }
+        }
+
+        Log.d(TAG, "onCreate: " + url);
 
         mWebview.loadUrl(url);
 
         final SoftKeyboardDectectorView softKeyboardDectectorView = new SoftKeyboardDectectorView(this);
-        addContentView(softKeyboardDectectorView, new FrameLayout.LayoutParams(-1,-1));
+        addContentView(softKeyboardDectectorView, new FrameLayout.LayoutParams(-1, -1));
         softKeyboardDectectorView.setOnHiddenKeyboard(new SoftKeyboardDectectorView.OnHiddenKeyboardListener() {
             @Override
             public void onHiddenSoftKeyboard() {
                 mWebview.loadUrl("javascript:showMenu()");
             }
         });
+
+        ActivityManager activityManager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
+
+        /*mWebview.getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
+            @Override
+            public void onGlobalLayout() {
+                Rect r = new Rect();
+                View rootview = mWebview.getRootView();
+                rootview.getWindowVisibleDisplayFrame(r);
+                int screenHeight = rootview.getRootView().getHeight();
+                int heightDifference = screenHeight - (r.bottom - r.top);
+                Resources r2 = getResources();
+
+                int px = (int) TypedValue.applyDimension(
+                        TypedValue.COMPLEX_UNIT_DIP,
+
+                        heightDifference,
+                        r2.getDisplayMetrics()
+                );
+                int px2 = (int) TypedValue.applyDimension(
+                        TypedValue.COMPLEX_UNIT_DIP,
+                        screenHeight,
+                        r2.getDisplayMetrics()
+                );
+                mWebview.loadUrl("javascript:fn_keyover('"+px2+"','"+px+"')");   //웹뷰안의 자바스크립트 함수 호출
+            }
+        });*/
+
+        /*Button camBtn = findViewById(R.id.cameraOn);
+
+        camBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(MainActivity.this,Camera2Activity.class);
+                startActivity(intent);
+            }
+        });*/
     }
 
 
     private class AndroidBridge {
+
         @JavascriptInterface
-        public void copyLink(String link){
-            Log.d(TAG, "copyLink: " + link);
-            ClipboardManager clipboardManager = (ClipboardManager)getSystemService(CLIPBOARD_SERVICE);
+        public void showLoading() {
+            Log.d(TAG, "showLoading: On");
+            runOnUiThread(new Runnable() {
+                public void run() {
+                    progressBar.setVisibility(View.VISIBLE);
+                }
+            });
+        }
+
+        @JavascriptInterface
+        public void hideLoading() {
+            Log.d(TAG, "hideLoading: Off");
+            runOnUiThread(new Runnable() {
+                public void run() {
+                    progressBar.setVisibility(View.GONE);
+                }
+            });
+        }
+
+        @JavascriptInterface
+        public void copyLink(String link) {
+            //Log.d(TAG, "copyLink: " + link);
+            ClipboardManager clipboardManager = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
             ClipData clipData = ClipData.newPlainText("48링크", link);
             clipboardManager.setPrimaryClip(clipData);
 
         }
 
         @JavascriptInterface
-        public String setLogin(String mb_id){
-            Log.d(TAG, "AndroidBridge: "+ mb_id);
-            if(mb_id!=null){
+        public String setLogin(String mb_id) {
+            //Log.d(TAG, "AndroidBridge: "+ mb_id);
+            if (mb_id != null) {
                 SharedPreferences pref = getSharedPreferences("AppLogin", MODE_PRIVATE);
                 SharedPreferences.Editor editor = pref.edit();
                 editor.putString("mb_id", mb_id);
                 editor.putString("login", "true");
                 editor.commit();
+                //macid 저장
+                appGetMacId();
                 return "true";
-            }else {
+            } else {
                 return "false";
             }
         }
 
         @JavascriptInterface
-        public String setLogout(){
+        public String setLogout() {
             Log.d(TAG, "AndroidBridge: logout");
             SharedPreferences pref = getSharedPreferences("AppLogin", MODE_PRIVATE);
             pref.getString("login", "");
@@ -337,6 +432,13 @@ public class MainActivity extends AppCompatActivity {
             editor.clear();
             editor.commit();
             return "true";
+        }
+
+        @JavascriptInterface
+        public String getMacId() {
+            MacAddress mid = new MacAddress();
+            macId = mid.getMacAddress();
+            return macId;
         }
 
         @JavascriptInterface
@@ -357,41 +459,45 @@ public class MainActivity extends AppCompatActivity {
         }
 
         @JavascriptInterface
-        public void camereOn(final String mb_id, final String title, final String cate1, final String cate2,final String type1, final String type2,final String wr_price, final String wr_price2, final String pd_price_type) {
+        public void camereOn(final String mb_id, final String title, final String cate1, final String cate2, final String type1, final String type2, final String wr_price, final String wr_price2, final String pd_price_type) {
             Log.d(TAG, "cameraOn :" + title);
-            Intent intent = new Intent(MainActivity.this,CameraActivity.class);
-            intent.putExtra("mb_id",mb_id);
-            intent.putExtra("title",title);
-            intent.putExtra("cate1",cate1);
-            intent.putExtra("cate2",cate2);
-            intent.putExtra("type1",type1);
-            intent.putExtra("type2",type2);
-            intent.putExtra("wr_price",wr_price);
-            intent.putExtra("wr_price2",wr_price2);
-            intent.putExtra("pd_price_type",pd_price_type);
+            Intent intent = new Intent(MainActivity.this, CameraActivity.class);
+            if (android.os.Build.VERSION.SDK_INT > Build.VERSION_CODES.LOLLIPOP) {
+                intent = new Intent(MainActivity.this, Camera2Activity.class);
+            }
+            intent.putExtra("mb_id", mb_id);
+            intent.putExtra("title", title);
+            intent.putExtra("cate1", cate1);
+            intent.putExtra("cate2", cate2);
+            intent.putExtra("type1", type1);
+            intent.putExtra("type2", type2);
+            intent.putExtra("wr_price", wr_price);
+            intent.putExtra("wr_price2", wr_price2);
+            intent.putExtra("pd_price_type", pd_price_type);
             startActivity(intent);
             finish();
         }
 
         @JavascriptInterface
-        public void camereOn2(final String mb_id,final String index) {
-            Intent intent = new Intent(MainActivity.this,CameraEditActivity.class);
-            intent.putExtra("mb_id",mb_id);
-            intent.putExtra("index",index);
-            startActivityForResult(intent,CAMERA_EDIT_REQUEST_CODE);
+        public void camereOn2(final String mb_id, final String index) {
+            Log.d(TAG, "camereOn2: ");
+            Intent intent = new Intent(MainActivity.this, CameraEditActivity.class);
+            intent.putExtra("mb_id", mb_id);
+            intent.putExtra("index", index);
+            startActivityForResult(intent, CAMERA_EDIT_REQUEST_CODE);
             //finish();
         }
 
         @JavascriptInterface
         public void camereOn3(final String mb_id) {
             Log.d(TAG, "camereOn3: " + mb_id);
-            Intent intent = new Intent(MainActivity.this,CameraEditCameraActivity.class);
-            intent.putExtra("mb_id",mb_id);
-            startActivityForResult(intent,VIDEO_EDIT_REQUEST_CODE);
+            Intent intent = new Intent(MainActivity.this, CameraEditCameraActivity.class);
+            intent.putExtra("mb_id", mb_id);
+            startActivityForResult(intent, VIDEO_EDIT_REQUEST_CODE);
         }
 
         @JavascriptInterface
-        public void write_complete(){
+        public void write_complete() {
             SharedPreferences pref = getSharedPreferences("pref", MODE_PRIVATE);
             SharedPreferences.Editor editor = pref.edit();
             editor.putString("write_active", "false");
@@ -399,27 +505,27 @@ public class MainActivity extends AppCompatActivity {
         }
 
         @JavascriptInterface
-        public void test(){
+        public void test() {
             Intent intent = new Intent(Settings.ACTION_APPLICATION_SETTINGS);
             startActivity(intent);
         }
 
         @JavascriptInterface
-        public void Onkeyboard(){
+        public void Onkeyboard() {
             InputMethodManager inputMethodManager = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
             inputMethodManager.toggleSoftInput(InputMethodManager.SHOW_FORCED, InputMethodManager.HIDE_IMPLICIT_ONLY);
         }
 
         @JavascriptInterface
-        public void HideKeyboard(){
+        public void HideKeyboard() {
             InputMethodManager inputMethodManager = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
             inputMethodManager.toggleSoftInput(InputMethodManager.HIDE_IMPLICIT_ONLY, InputMethodManager.SHOW_FORCED);
         }
 
         @JavascriptInterface
-        public void resetBadge(){
+        public void resetBadge() {
             Intent badgeIntent = new Intent("android.intent.action.BADGE_COUNT_UPDATE");
-            badgeIntent.putExtra("badge_count",0);
+            badgeIntent.putExtra("badge_count", 0);
             badgeIntent.putExtra("badge_count_package_name", getPackageName());
             badgeIntent.putExtra("badge_count_class_name", SplashActivity.class.getName());
             sendBroadcast(badgeIntent);
@@ -433,31 +539,31 @@ public class MainActivity extends AppCompatActivity {
             locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
             isGPSEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
             isNetworkEnabled = locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
-            if(isGPSEnabled){
+            if (isGPSEnabled) {
                 if (ActivityCompat.checkSelfPermission(getApplicationContext(), android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(getApplicationContext(), android.Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
                     location = null;
-                }else {
+                } else {
                     locationManager.requestLocationUpdates(locationManager.GPS_PROVIDER, 100, 1, myLoc);
-                    if(locationManager != null){
+                    if (locationManager != null) {
                         location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
                     }
                 }
             }
-            if(isNetworkEnabled){
+            if (isNetworkEnabled) {
                 if (ActivityCompat.checkSelfPermission(getApplicationContext(), android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(getApplicationContext(), android.Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
                     location = null;
-                }else {
+                } else {
                     locationManager.requestLocationUpdates(locationManager.NETWORK_PROVIDER, 100, 1, myLoc);
-                    if(locationManager != null){
+                    if (locationManager != null) {
                         location = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
                     }
                 }
             }
 
             if (location != null) {
-                loc = location.getLatitude()+"/"+location.getLongitude();
+                loc = location.getLatitude() + "/" + location.getLongitude();
                 locationManager.removeUpdates(myLoc);
-            }else{
+            } else {
                 locationManager.removeUpdates(myLoc);
             }
 
@@ -465,95 +571,148 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    public void appGetMacId() {
+        MacAddress mid = new MacAddress();
+        macId = mid.getMacAddress();
+        SharedPreferences preferences = getSharedPreferences("deviceId", MODE_PRIVATE);
+        SharedPreferences.Editor editor = preferences.edit();
+        editor.putString("macId", macId);
+        editor.commit();
+    }
 
+    public void unsetMacId() {
+        SharedPreferences pref = getSharedPreferences("deviceId", MODE_PRIVATE);
+        pref.getString("macId", "");
+        SharedPreferences.Editor editor = pref.edit();
+        editor.clear();
+        editor.commit();
+    }
 
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
-        if(keyCode == KeyEvent.KEYCODE_BACK) {
-            if(mWebview.canGoBack()) {
+        if (keyCode == KeyEvent.KEYCODE_BACK) {
+            if (mWebview.canGoBack()) {
                 WebBackForwardList webBackForwardList = mWebview.copyBackForwardList();
-                String backUrl = webBackForwardList.getItemAtIndex(webBackForwardList.getCurrentIndex()-1).getUrl();
+                String backUrl = webBackForwardList.getItemAtIndex(webBackForwardList.getCurrentIndex() - 1).getUrl();
                 String curruntUrl = mWebview.getUrl();
-                Log.d(TAG, "뒤로가기: " + backUrl + "//" + curruntUrl);
-
-                if (backUrl.contains("login") != true) {
-                    
-                    if (mWebview.getUrl().contains("#modal") == true) {
-                        mWebview.loadUrl("javascript:modalClose()");
-                        mWebview.goBackOrForward(-1);
-                    } else if (mWebview.getUrl().contains("#menu") == true) {
-                        mWebview.loadUrl("javascript:closeMenu()");
-                        mWebview.goBackOrForward(-1);
-                    } else if (mWebview.getUrl().contains("#view") == true) {
-                        mWebview.loadUrl("javascript:modalCloseThis()");
-                        mWebview.goBackOrForward(-1);
-                    } else if (mWebview.getUrl().contains("#search") == true) {
-                        mWebview.loadUrl("javascript:fnSetting()");
-                        mWebview.goBackOrForward(-1);
-                    } else if (mWebview.getUrl().contains("#preview") == true) {
-                        mWebview.loadUrl("javascript:hidePreview()");
-                        mWebview.goBackOrForward(-1);
-                    } else if (mWebview.getUrl().contains("#detailview") == true) {
-                        Log.d(TAG, "onKeyDown: Action");
-                        mWebview.loadUrl("javascript:hideDetail()");
-                        mWebview.goBackOrForward(-1);
-                    } else if (mWebview.getUrl().contains("#blind") == true) {
-                        mWebview.loadUrl("javascript:blindClose()");
-                        mWebview.goBackOrForward(-1);
-                    } else if (mWebview.getUrl().contains("#category") == true) {
-                        mWebview.loadUrl("javascript:cateClose()");
-                        mWebview.goBackOrForward(-1);
-                    }  else if (mWebview.getUrl().contains("#talkView") == true) {
-                        mWebview.loadUrl("javascript:modalCloseTalk()");
-                        mWebview.goBackOrForward(-1);
-                    } else if (mWebview.getUrl().contains("#mapView") == true) {
-                        mWebview.loadUrl("javascript:mapViewClose()");
-                        mWebview.goBackOrForward(-1);
-                    } else {
-                        if(curruntUrl.contains("cafe24.com/index.php") == true || (curruntUrl.equals("http://mave01.cafe24.com/") == true || curruntUrl.equals("http://mave01.cafe24.com/#") == true)){
-                            long tempTime = System.currentTimeMillis();
-                            long intervalTime = tempTime - backPressedTime;
-
-                            if (0 <= intervalTime && FINISH_INTERVAL_TIME >= intervalTime) {
-                                finish();
-                            } else {
-                                backPressedTime = tempTime;
-                                Toast.makeText(this, "뒤로가기를 한번더 누르면 종료 됩니다.", Toast.LENGTH_SHORT).show();
-                            }
-                        }else {
-                            mWebview.goBack();
-                        }
-                    }
-                } else {
-                    long tempTime = System.currentTimeMillis();
-                    long intervalTime = tempTime - backPressedTime;
-
-                    if (0 <= intervalTime && FINISH_INTERVAL_TIME >= intervalTime) {
-                        finish();
-                    } else {
-                        backPressedTime = tempTime;
-                        Toast.makeText(this, "뒤로가기를 한번더 누르면 종료 됩니다.", Toast.LENGTH_SHORT).show();
-                    }
-                }
-
-            }else{
+                Log.d(TAG, "onKeyDown: 뒤로가기 = " + backUrl + "// 현재  = " + curruntUrl + "// hash여부 = " + curruntUrl.contains("#"));
                 long tempTime = System.currentTimeMillis();
                 long intervalTime = tempTime - backPressedTime;
 
-                if (0 <= intervalTime && FINISH_INTERVAL_TIME >= intervalTime) {
-                    finish();
-                } else {
-                    backPressedTime = tempTime;
-                    Toast.makeText(this, "뒤로가기를 한번더 누르면 종료 됩니다.", Toast.LENGTH_SHORT).show();
+                String filterUrl = curruntUrl.replace("http://484848.co.kr/","");
+                Log.d(TAG, "onKeyDown: " + filterUrl);
+                if(filterUrl != ""){
+                    if(filterUrl.contains("#")){//모달이 있는 상태이면
+                        Log.d(TAG, "onKeyDown: modals");
+                        if(filterUrl.contains("#view")){
+                            mWebview.loadUrl("javascript:modalCloseThis()");
+                        }else if(filterUrl.contains("#detailview")){
+                            Log.d(TAG, "onKeyDown: detailview");
+                            mWebview.loadUrl("javascript:fnDetailClose()");
+                        }else if(filterUrl.contains("#mapView")){
+                            mWebview.loadUrl("javascript:mapViewClose()");
+                        }else if(filterUrl.contains("#blind")){
+                            mWebview.loadUrl("javascript:blindClose()");
+                        }else if(filterUrl.contains("#preview")){
+                            mWebview.loadUrl("javascript:fnDetailHide()");
+                        }else if(filterUrl.contains("#talkView")){
+                            mWebview.loadUrl("javascript:modalCloseTalk()");
+                        }else if(filterUrl.contains("#search")){
+                            mWebview.loadUrl("javascript:fnSetting()");
+                        }else if(filterUrl.contains("#menu")){
+                            mWebview.loadUrl("javascript:closeMenu()");
+                        }else if(filterUrl.contains("#category")){
+                            mWebview.loadUrl("javascript:cateClose()");
+                        }else if(filterUrl.contains("#writes")){
+                            mWebview.loadUrl("javascript:modalClose()");
+                        }else if(filterUrl.contains("#mapsel")){
+                            Log.d(TAG, "onKeyDown: mapsel!!!");
+                            mWebview.loadUrl("javascript:mapSelect()");
+                        }else if(filterUrl.contains("#modal")){
+                            mWebview.loadUrl("javascript:modalClose()");
+                        }else if(filterUrl.contains("#")){
+                            if(!filterUrl.startsWith("/mobile")){
+                                if (0 <= intervalTime && FINISH_INTERVAL_TIME >= intervalTime) {
+                                    if (Build.VERSION.SDK_INT > 16) {
+                                        finishAffinity();
+                                    } else {
+                                        ActivityCompat.finishAffinity(this);
+                                    }
+                                    setFinished();
+                                    finish();
+                                    System.runFinalization();
+                                    System.exit(0);
+                                    //finish();
+                                } else {
+                                    backPressedTime = tempTime;
+                                    Toast.makeText(this, "뒤로 가기를 한 번 더 누르면 종료됩니다.", Toast.LENGTH_SHORT).show();
+                                }
+                            }else{
+                                mWebview.goBack();
+                            }
+                        }else {
+                            mWebview.loadUrl("javascript:modalClose()");
+                        }
+                    }else {
+                        if(filterUrl.startsWith("index.php")){
+                            Log.d(TAG, "onKeyDown: index??");
+                            if (0 <= intervalTime && FINISH_INTERVAL_TIME >= intervalTime) {
+                                if (Build.VERSION.SDK_INT > 16) {
+                                    finishAffinity();
+                                } else {
+                                    ActivityCompat.finishAffinity(this);
+                                }
+                                setFinished();
+                                finish();
+                                System.runFinalization();
+                                System.exit(0);
+                                //finish();
+                            } else {
+                                backPressedTime = tempTime;
+                                Toast.makeText(this, "뒤로 가기를 한 번 더 누르면 종료됩니다.", Toast.LENGTH_SHORT).show();
+                            }
+                        }else {
+                            Log.d(TAG, "onKeyDown: back??");
+                            if(backUrl.contains("#")){
+                                //무조건 인덱스로?
+                                if(backUrl.contains("#view")){
+                                    String[] hash = backUrl.split("#");
+                                    String[] pd_ids = hash[1].split("_");
+                                    String pd_id = pd_ids[1];
+                                    mWebview.loadUrl("http://484848.co.kr/index.php?pd_id="+pd_id);
+                                }else {
+                                    mWebview.loadUrl("http://484848.co.kr");
+                                }
+                            }else {
+                                mWebview.goBack();
+                            }
+                        }
+                    }
+                }else{
+                    if (0 <= intervalTime && FINISH_INTERVAL_TIME >= intervalTime) {
+                        if (Build.VERSION.SDK_INT > 16) {
+                            finishAffinity();
+                        } else {
+                            ActivityCompat.finishAffinity(this);
+                        }
+                        setFinished();
+                        finish();
+                        System.runFinalization();
+                        System.exit(0);
+                        //finish();
+                    } else {
+                        backPressedTime = tempTime;
+                        Toast.makeText(this, "뒤로 가기를 한 번 더 누르면 종료됩니다.", Toast.LENGTH_SHORT).show();
+                    }
                 }
+                return true;
             }
-            return true;
         }
         return false;
     }
 
     private class CustomWebChromeClient extends WebChromeClient {
-         @Override
+        @Override
         public boolean onConsoleMessage(ConsoleMessage cm) {
             Log.e("raon", cm.message() + " -- From Line " + cm.lineNumber() + "of" + cm.sourceId());
             return true;
@@ -576,13 +735,13 @@ public class MainActivity extends AppCompatActivity {
         }
 
         // For 3.0 <= Android Version < 4.1
-        public void openFileChooser(ValueCallback<Uri> uploadMsg, String acceptType){
+        public void openFileChooser(ValueCallback<Uri> uploadMsg, String acceptType) {
             Log.d(TAG, "openFileChooser: 4.1");
             openFileChooser(uploadMsg, acceptType, "");
         }
 
         // For 4.1 <= Android Version < 5.0
-        public void openFileChooser(ValueCallback<Uri> uploadFile, String acceptType, String capture){
+        public void openFileChooser(ValueCallback<Uri> uploadFile, String acceptType, String capture) {
             Log.d(TAG, "openFileChooser: 5.0");
             Log.d(getClass().getName(), "openFileChooser : " + acceptType + "/" + capture);
             mUploadMessage = uploadFile;
@@ -603,7 +762,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
 
-        private void imageChooser(){
+        private void imageChooser() {
 
             /*Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
             if(takePictureIntent.resolveActivity(getPackageManager()) != null){
@@ -642,12 +801,12 @@ public class MainActivity extends AppCompatActivity {
         }
 
         @Override
-        public boolean onJsAlert(WebView view, String url, String message, final android.webkit.JsResult result){
+        public boolean onJsAlert(WebView view, String url, String message, final android.webkit.JsResult result) {
             new AlertDialog.Builder(view.getContext())
                     .setTitle("48 알림")
                     .setMessage(message)
                     .setPositiveButton(android.R.string.ok,
-                            new AlertDialog.OnClickListener(){
+                            new AlertDialog.OnClickListener() {
                                 public void onClick(DialogInterface dialog, int which) {
                                     result.confirm();
                                 }
@@ -665,7 +824,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         @Override
-        public boolean onJsConfirm(WebView view, String url, String message, final android.webkit.JsResult result){
+        public boolean onJsConfirm(WebView view, String url, String message, final android.webkit.JsResult result) {
             new AlertDialog.Builder(view.getContext())
                     .setTitle("48 알림")
                     .setMessage(message)
@@ -690,24 +849,36 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private class CustomWebClient extends WebViewClient {
-
-
-
         @Override
         public void onUnhandledKeyEvent(WebView view, KeyEvent event) {
             Log.d(TAG, "onUnhandledKeyEvent: " + view.getUrl());
-            if(event.getKeyCode() == 66 && view.getUrl().contains("my_location.php")){
+            if (event.getKeyCode() == 66 && view.getUrl().contains("my_location.php")) {
                 view.loadUrl("javascript:mapKeySet()");
             }
-            if(event.getKeyCode() == 66 && view.getUrl().contains("#writes")){
+            if (event.getKeyCode() == 66 && view.getUrl().contains("#writes")) {
                 view.loadUrl("javascript:fnOnCam()");
+            }
+            if (event.getKeyCode() == 66 && view.getUrl().contains("#mapsel")) {
+                view.loadUrl("javascript:mapSelect()");
+                //todo:mapSelect일경우만 인데 일반 입력창에서도 됨..
+                Log.d(TAG, "onUnhandledKeyEvent: " + view.getUrl());
+                //if(!view.getUrl().contains("write.php")) {
+                    Handler delayHandler = new Handler();
+                    delayHandler.postDelayed(new Runnable() {
+                        @Override
+                        public void run() {
+                            InputMethodManager inputMethodManager = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+                            inputMethodManager.hideSoftInputFromWindow(mWebview.getWindowToken(), 0);
+                        }
+                    }, 1200);
+                //}
             }
             //super.onUnhandledKeyEvent(view, event);
         }
 
         @Override
         public boolean shouldOverrideUrlLoading(WebView view, String url) {
-            if(!isNetworkConnected(MainActivity.this)){
+            if (!isNetworkConnected(MainActivity.this)) {
                 /*CommonDialogs cm = new CommonDialogs(MainActivity.this);
 
                 cm.showAlertDialog(MainActivity.this, "현재 인터넷 연결이 안되어 있어 앱을 종료합니다.", new DialogInterface.OnClickListener() {
@@ -717,7 +888,7 @@ public class MainActivity extends AppCompatActivity {
                     }
                 },null);*/
                 finish();
-                Toast.makeText(MainActivity.this,"현재 인터넷이 연결되어 있지 않아 앱을 종료 하였습니다.",Toast.LENGTH_SHORT).show();
+                Toast.makeText(MainActivity.this, "현재 인터넷이 연결되어 있지 않아 앱을 종료 하였습니다.", Toast.LENGTH_SHORT).show();
             }
 
             if (url != null && url.indexOf("search.naver") > -1) {
@@ -733,7 +904,7 @@ public class MainActivity extends AppCompatActivity {
                 startActivity(intent);
                 return true;
             }
-            if(url.startsWith("sms:")) {
+            if (url.startsWith("sms:")) {
                 Intent intent = new Intent(Intent.ACTION_SENDTO, Uri.parse(url));
                 startActivity(intent);
                 return true;
@@ -756,10 +927,17 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
 
-            if (url.startsWith("http://") || url.startsWith("https://")) {
-                view.loadUrl(url);
+            /*if (url.startsWith("http://") || url.startsWith("https://")) {
+
+                if (url.contains("mave01.cafe24.com") || url.contains("484848.co.kr")) {
+                    view.loadUrl(url);
+                } else {
+                    Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+                    startActivity(intent);
+                }
+
                 return true;
-            }
+            }*/
 
             if ((url.startsWith("http://") || url.startsWith("https://")) && (url.contains("market.android.com") || url.contains("m.ahnlab.com/kr/site/download"))) {
                 Uri uri = Uri.parse(url);
@@ -822,7 +1000,7 @@ public class MainActivity extends AppCompatActivity {
                     return false;
                 }
             }
-
+            Log.d(TAG, "shouldOverrideUrlLoading: " + url);
             // 계좌이체 커스텀 스키마
             if (url.startsWith("smartxpay-transfer://")) {
                 boolean isatallFlag = isPackageInstalled(getApplicationContext(), "kr.co.uplus.ecredit");
@@ -846,14 +1024,14 @@ public class MainActivity extends AppCompatActivity {
                             startActivity(intent);
                             overridePendingTransition(0, 0);
                         }
-                    } , "취소", new DialogInterface.OnClickListener() {
+                    }, "취소", new DialogInterface.OnClickListener() {
                         public void onClick(DialogInterface dialog, int which) {
                             dialog.cancel();
                         }
                     });
                     return true;
                 }
-            }else if(url.startsWith("lguthepay-xpay://")) {
+            } else if (url.startsWith("lguthepay-xpay://")) {
                 boolean isatallFlag = isPackageInstalled(getApplicationContext(), "com.lguplus.paynow");
                 if (isatallFlag) {
                     boolean override = false;
@@ -896,7 +1074,7 @@ public class MainActivity extends AppCompatActivity {
                         public void onClick(DialogInterface dialog, int which) {
                             mWebview.loadUrl("http://mobile.vpay.co.kr/jsp/MISP/andown.jsp");
                         }
-                    } , "취소", new DialogInterface.OnClickListener() {
+                    }, "취소", new DialogInterface.OnClickListener() {
                         public void onClick(DialogInterface dialog, int which) {
                             dialog.cancel();
                         }
@@ -944,7 +1122,7 @@ public class MainActivity extends AppCompatActivity {
         alert.show();
     }
 
-    private File createImageFile() throws IOException{
+    private File createImageFile() throws IOException {
         String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
         String imageFileName = "JPEG_" + timeStamp + "_";
         File storageDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
@@ -955,18 +1133,18 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         Log.d(TAG, "onActivityResult: " + requestCode + "// resultCode : " + resultCode + "// data: " + data);
-        if(requestCode == CAMERA_EDIT_REQUEST_CODE && resultCode == RESULT_OK){
+        if (requestCode == CAMERA_EDIT_REQUEST_CODE && resultCode == RESULT_OK) {
             String index = data.getStringExtra("index");
             String filename = data.getStringExtra("filename");
             String skip = data.getStringExtra("skip");
-            Log.d(TAG, "index: " + index + "// filename : " + filename + "// skip: " + skip);
-            if(skip==null || skip==""){
-                Log.d(TAG, "index: " + index + "// filename : " + filename + "// skip: " + skip);
-                mWebview.loadUrl("javascript:setImages('"+filename+"','"+index+"');");
+            //Log.d(TAG, "index: " + index + "// filename : " + filename + "// skip: " + skip);
+            if (skip == null || skip == "") {
+                //Log.d(TAG, "index: " + index + "// filename : " + filename + "// skip: " + skip);
+                mWebview.loadUrl("javascript:setImages('" + filename + "','" + index + "');");
             }
-        }else if(requestCode == INPUT_FILE_REQUEST_CODE && resultCode == RESULT_OK){
-            if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP){
-                if(mFilePathCallback == null){
+        } else if (requestCode == INPUT_FILE_REQUEST_CODE && resultCode == RESULT_OK) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                if (mFilePathCallback == null) {
                     super.onActivityResult(requestCode, resultCode, data);
                     return;
                 }
@@ -974,8 +1152,8 @@ public class MainActivity extends AppCompatActivity {
                 Uri[] results = new Uri[]{getResultUri(data)};
                 mFilePathCallback.onReceiveValue(results);
                 mFilePathCallback = null;
-            }else{
-                if(mUploadMessage == null){
+            } else {
+                if (mUploadMessage == null) {
                     super.onActivityResult(requestCode, resultCode, data);
                     return;
                 }
@@ -984,54 +1162,55 @@ public class MainActivity extends AppCompatActivity {
                 mUploadMessage.onReceiveValue(result);
                 mUploadMessage = null;
             }
-        }else if(requestCode == VIDEO_EDIT_REQUEST_CODE && resultCode == RESULT_OK){
+        } else if (requestCode == VIDEO_EDIT_REQUEST_CODE && resultCode == RESULT_OK) {
             String videoname = data.getStringExtra("videoname");
             String skip = data.getStringExtra("skip");
             Log.d(TAG, "index: " + index + "// videoname : " + videoname);
-            if(skip==null || skip==""){
-                Log.d(TAG, "index: " + index + "// videoname : " + videoname + "// skip: " + skip);
-                mWebview.loadUrl("javascript:setVideo('"+videoname+"');");
+            if (skip == null || skip == "") {
+                mWebview.loadUrl("javascript:setVideo('" + videoname + "');");
             }
-        }else{
-            if(mFilePathCallback != null) mFilePathCallback.onReceiveValue(null);
-            if(mUploadMessage != null) mUploadMessage.onReceiveValue(null);
+        } else {
+            if (mFilePathCallback != null)
+                mFilePathCallback.onReceiveValue(null);
+            if (mUploadMessage != null)
+                mUploadMessage.onReceiveValue(null);
             mFilePathCallback = null;
             mUploadMessage = null;
             super.onActivityResult(requestCode, resultCode, data);
         }
 
-        if(requestCode == CAMERA_REQUEST_CODE  && requestCode == RESULT_OK){
-            Log.d(TAG,"cam result : " + data.getType());
+        if (requestCode == CAMERA_REQUEST_CODE && requestCode == RESULT_OK) {
+            Log.d(TAG, "cam result : " + data.getType());
         }
     }
 
-    private Uri getResultUri(Intent data){
+    private Uri getResultUri(Intent data) {
         Uri result = null;
 
-        if(data == null || TextUtils.isEmpty(data.getDataString())){
-            if(mCameraPhotoPath != null){
+        if (data == null || TextUtils.isEmpty(data.getDataString())) {
+            if (mCameraPhotoPath != null) {
                 result = Uri.parse(mCameraPhotoPath);
             }
-        }else{
+        } else {
             String filePath = "";
-            if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP){
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                 filePath = data.getDataString();
-            }else{
-                filePath = "file : " + RealPathUtil.getRealPath(this,data.getData());
+            } else {
+                filePath = "file : " + RealPathUtil.getRealPath(this, data.getData());
             }
             result = Uri.parse(filePath);
         }
         return result;
     }
 
-    public Location getLocation(){
+    public Location getLocation() {
         isGetLocation = true;
         LocationImpl myLoc = new LocationImpl();
         locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
         isGPSEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
         isNetworkEnabled = locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
 
-        if(!isGPSEnabled && !isNetworkEnabled){
+        if (!isGPSEnabled && !isNetworkEnabled) {
             CommonDialogs cm = new CommonDialogs(MainActivity.this);
             cm.showAlertDialog(MainActivity.this, "GPS정보를 찾을 수 없습니다. \r설정창으로 이동하시겠습니까?", new DialogInterface.OnClickListener() {
                 @Override
@@ -1049,23 +1228,23 @@ public class MainActivity extends AppCompatActivity {
             return null;
         }
 
-        if(isGPSEnabled){
+        if (isGPSEnabled) {
             if (ActivityCompat.checkSelfPermission(getApplicationContext(), android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(getApplicationContext(), android.Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
                 location = null;
-            }else {
+            } else {
                 locationManager.requestLocationUpdates(locationManager.GPS_PROVIDER, 100, 1, myLoc);
-                if(locationManager != null){
+                if (locationManager != null) {
                     location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
                 }
             }
         }
 
-        if(isNetworkEnabled){
+        if (isNetworkEnabled) {
             if (ActivityCompat.checkSelfPermission(getApplicationContext(), android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(getApplicationContext(), android.Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
                 location = null;
-            }else {
+            } else {
                 locationManager.requestLocationUpdates(locationManager.NETWORK_PROVIDER, 100, 1, myLoc);
-                if(locationManager != null){
+                if (locationManager != null) {
                     location = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
                 }
             }
@@ -1080,53 +1259,56 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         InputMethodManager inputMethodManager = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-        inputMethodManager.hideSoftInputFromWindow(mWebview.getWindowToken(),0);
+        inputMethodManager.hideSoftInputFromWindow(mWebview.getWindowToken(), 0);
+        setFinished();
         PRRUN.bAppRunned = false;
         super.onDestroy();
     }
 
     @Override
     protected void onPause() {
-        super.onPause();
+        Log.d(TAG, "onPause: " + mWebview.getUrl());
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
             CookieSyncManager.getInstance().stopSync();
         }
         InputMethodManager inputMethodManager = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-        inputMethodManager.hideSoftInputFromWindow(mWebview.getWindowToken(),0);
-        Log.d(TAG, "onPause: ");
+        inputMethodManager.hideSoftInputFromWindow(mWebview.getWindowToken(), 0);
         PRRUN.bAppRunned = false;
+        mWebview.loadUrl("javascript:modalCloseThis()");
+        //mWebview.goBackOrForward(-1); //이게 필요했던 이유가 있을텐데..
+        super.onPause();
     }
 
     @Override
     protected void onResume() {
         super.onResume();
+        Log.d(TAG, "onResume: " + mWebview.getUrl());
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
             CookieSyncManager.createInstance(this);
         }
         InputMethodManager inputMethodManager = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-        inputMethodManager.hideSoftInputFromWindow(mWebview.getWindowToken(),0);
-        Log.d(TAG, "onResume: ");
+        inputMethodManager.hideSoftInputFromWindow(mWebview.getWindowToken(), 0);
         PRRUN.bAppRunned = true;
     }
 
     /*
-    * 네트워크 상태 체크
-    */
-    public static boolean isNetworkConnected(Context context){
+     * 네트워크 상태 체크
+     */
+    public static boolean isNetworkConnected(Context context) {
         ConnectivityManager manager = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
         NetworkInfo mobile = manager.getNetworkInfo(ConnectivityManager.TYPE_MOBILE);
         NetworkInfo wifi = manager.getNetworkInfo(ConnectivityManager.TYPE_WIFI);
         NetworkInfo winmax = manager.getNetworkInfo(ConnectivityManager.TYPE_WIMAX);
         boolean bwinmax = false;
-        if(winmax != null){
+        if (winmax != null) {
             bwinmax = winmax.isConnected();
         }
-        if(mobile != null){
-            if(mobile.isConnected() || wifi.isConnected() || bwinmax) {
+        if (mobile != null) {
+            if (mobile.isConnected() || wifi.isConnected() || bwinmax) {
                 return true;
             }
-        }else{
-            if(wifi.isConnected() || bwinmax) {
+        } else {
+            if (wifi.isConnected() || bwinmax) {
                 return false;
             }
         }
@@ -1134,4 +1316,29 @@ public class MainActivity extends AppCompatActivity {
         //return manager.getActiveNetworkInfo() != null;
     }
 
+    public void setFinished() {
+        String url = mWebview.getUrl();
+        Log.d(TAG, "setFinished: " + url);
+        String split = "\\?";
+        String[] param = url.split(split);
+        if (param.length > 1) {
+            String[] step1 = param[1].split("&");
+            for (int i = 0; i < step1.length; i++) {
+                if (step1[i].contains("sc_id")) {
+                    String[] step2 = step1[i].split("=");
+                    SharedPreferences pref = getSharedPreferences("searchId", MODE_PRIVATE);
+                    SharedPreferences.Editor editor = pref.edit();
+                    editor.putString("sc_id", step2[1]);
+                    editor.commit();
+                }
+            }
+        } else {
+            SharedPreferences pref = getSharedPreferences("searchId", MODE_PRIVATE);
+            SharedPreferences.Editor editor = pref.edit();
+            editor.putString("sc_id", "");
+            editor.commit();
+        }
+    }
+
 }
+

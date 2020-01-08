@@ -2,17 +2,19 @@ package com.foureight;
 
 
 import android.app.AlertDialog;
-import android.content.ContentResolver;
-import android.content.ContentUris;
+import android.app.ProgressDialog;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
+import android.content.pm.PackageManager;
 import android.content.res.Configuration;
-import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.PixelFormat;
 import android.hardware.Camera;
+import android.hardware.camera2.CameraCaptureSession;
+import android.hardware.camera2.CameraManager;
 import android.media.*;
 import android.net.Uri;
 import android.os.AsyncTask;
@@ -20,14 +22,12 @@ import android.os.Build;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.Message;
-import android.provider.MediaStore;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.util.Base64;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.Display;
 import android.view.KeyEvent;
-import android.view.OrientationEventListener;
 import android.view.Surface;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
@@ -51,7 +51,8 @@ import java.lang.reflect.Method;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.net.URLEncoder;
+import java.net.URLDecoder;
+import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -60,6 +61,8 @@ import gun0912.tedbottompicker.TedBottomPicker;
 public class CameraActivity extends AppCompatActivity implements SurfaceHolder.Callback{
     final static String TAG = "CameraActivity";
     Camera camera;
+    CameraManager camera2;
+    CameraCaptureSession camSession;
     SurfaceHolder surfaceHolder;
     SurfaceView surfaceView;
     boolean previewImg = false;
@@ -78,6 +81,7 @@ public class CameraActivity extends AppCompatActivity implements SurfaceHolder.C
     Uri selPhotoUri;
     byte[] bytes;
     Handler handler;
+    int value;
 
     private TextureView mPreview;
 
@@ -89,6 +93,8 @@ public class CameraActivity extends AppCompatActivity implements SurfaceHolder.C
     Camera.Size previewSize;
     Camera.Size optimalSize;
 
+    private FileWrite fileWrite;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -97,13 +103,14 @@ public class CameraActivity extends AppCompatActivity implements SurfaceHolder.C
         }else{
             setContentView(R.layout.activity_camera_land);
         }
+
+        Log.d(TAG, "onCreate: " + checkCameraHardware(this));
         //sendBroadcast(new Intent(Intent.ACTION_MEDIA_MOUNTED, Uri.parse("file://" + Environment.getExternalStorageDirectory().getAbsolutePath())));
 
         sd = Environment.getExternalStorageDirectory().getAbsolutePath()+"/foureight";
-        File dir = new File(sd);
+        /*File dir = new File(sd);
 
         String[] children = dir.list();
-        //Log.d(TAG, "onCreate: "+children.length);
         if (children != null) {
             for (int i=0; i<children.length; i++) {
                 String filename = children[i];
@@ -113,7 +120,7 @@ public class CameraActivity extends AppCompatActivity implements SurfaceHolder.C
                     f.delete();
                 }
             }
-        }
+        }*/
         /*try{
             File file = new File(sd);
             File[] flist = file.listFiles();
@@ -199,7 +206,6 @@ public class CameraActivity extends AppCompatActivity implements SurfaceHolder.C
         }
 
         firstAction();
-
     }
 
     private void firstAction(){
@@ -207,10 +213,7 @@ public class CameraActivity extends AppCompatActivity implements SurfaceHolder.C
             @Override
             protected void onPostExecute(CameraActivity cameraActivity) {
                 //super.onPostExecute(cameraActivity);
-
-                Log.d(TAG, "onCreate: 시작");
-
-                url = "http://mave01.cafe24.com/mobile/photo_upload.php";
+                url = "http://484848.co.kr/mobile/photo_upload.php";
                 sd = Environment.getExternalStorageDirectory().getAbsolutePath()+"/foureight";
 
                 camBtn.setOnClickListener(mClickListner);
@@ -249,33 +252,36 @@ public class CameraActivity extends AppCompatActivity implements SurfaceHolder.C
     Button.OnClickListener mClickListner = new View.OnClickListener(){
         @Override
         public void onClick(View v) {
-            switch (v.getId()) {
-                case R.id.videoBtn :
-                    isRecord();
-                    break;
-                case R.id.camBtn :
-                    isCapture();
-                    break;
-                case R.id.skipBtn :
-                    isSkip();
-                    break;
-                case R.id.saveBtn :
-                    isSave();
-                    break;
-                case R.id.photoBtn :
-                    isPhoto();
-                    break;
-                case R.id.cam_toggle :
-                    cameraSwith();
-                    break;
+            if(fileWrite == null || fileWrite.getStatus() == AsyncTask.Status.FINISHED) {
+                switch (v.getId()) {
+                    case R.id.videoBtn:
+                        isRecord();
+                        break;
+                    case R.id.camBtn:
+                        isCapture();
+                        break;
+                    case R.id.skipBtn:
+                        isSkip();
+                        break;
+                    case R.id.saveBtn:
+                        isSave();
+                        break;
+                    case R.id.photoBtn:
+                        isPhoto();
+                        break;
+                    case R.id.cam_toggle:
+                        cameraSwith();
+                        break;
+                }
+            }else{
+                Toast.makeText(CameraActivity.this, "파일을 등록중입니다.",Toast.LENGTH_SHORT).show();
             }
         }
     };
 
     public void isPhoto(){
         sd = Environment.getExternalStorageDirectory().getAbsolutePath() + "/foureight";
-
-        Intent mediaScanIntent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
+        Intent mediaScanIntent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE,Uri.parse("file://"+sd));
         File f = new File(sd); //새로고침할 사진경로
         Uri contentUri = Uri.fromFile(f);
         mediaScanIntent.setData(contentUri);
@@ -284,81 +290,28 @@ public class CameraActivity extends AppCompatActivity implements SurfaceHolder.C
             .setOnMultiImageSelectedListener(new TedBottomPicker.OnMultiImageSelectedListener() {
                 @Override
                 public void onImagesSelected(ArrayList<Uri> uriList) {
-
+                    Log.d(TAG, "onImagesSelected: "+uriList.toString() );
                     int thisCount = camCount;
                     thisCount = thisCount + uriList.size();
                     if(thisCount > 5 ){
                         Toast.makeText(CameraActivity.this, "사진은 5개까지 선택가능합니다.", Toast.LENGTH_SHORT).show();
                         return;
                     }
+
                     for(int i = 0; i < uriList.size(); i++) {
 
                         try {
 
-                            String file_Path = uriList.get(i).toString();
-                            String new_file = new String(file_Path.getBytes("utf-8"),"utf-8");
-                            Log.d(TAG, "onImagesSelected: " + file_Path);
-                            String[] realPath = file_Path.split("//");
-                            String filePath = realPath[1];
-                            selPhotoUri = uriList.get(i);
-                            Log.d(TAG, "onImagesSelected: " + filePath);
+                            fileWrite = new FileWrite();
+                            value = 0;
+                            fileWrite.execute(uriList.get(i));
 
-                            BitmapFactory.Options options = new BitmapFactory.Options();
-                            options.inSampleSize = 2;
-
-                            //Bitmap image = BitmapFactory.decodeFile(file_Path,options);
-                            Bitmap image = BitmapFactory.decodeStream(getContentResolver().openInputStream(uriList.get(i)));
-
-                            ExifInterface exif = new ExifInterface(filePath);
-                            Log.d(TAG, "onImagesSelected: exif " + exif);
-                            image = ExifUtils.rotateBitmap(filePath,image);
-
-                            Log.d(TAG, "onImagesSelected: exif " + image);
-
-                            if(image!=null) {
-                                //가로 세로 구분
-                                int ratio = image.getWidth() / image.getHeight();
-
-                                Log.d(TAG, "onImagesSelected: " +ratio);
-
-                                Bitmap resizeImg = Bitmap.createScaledBitmap(image, image.getWidth(), image.getHeight(), true);
-                                bytes = bitmapToByteArray(resizeImg);
-                                url = "http://mave01.cafe24.com/mobile/photo_upload.php";
-                                File file = new File(sd);
-                                file.mkdir();
-                                file_name = System.currentTimeMillis() + "_" + mb_id + "_" + camCount + ".jpg";
-                                path = sd + "/" + file_name;
-
-                                file = new File(path);
-
-                                FileOutputStream fos = new FileOutputStream(file);
-                                fos.write(bytes);
-                                fos.flush();
-                                fos.close();
-
-                                if (filename == null || filename == "") {
-                                    filename = file_name;
-                                } else {
-                                    filename = filename + "," + file_name;
-                                }
-                                if (mPath == null) {
-                                    mPath = path;
-                                } else {
-                                    mPath = mPath + "," + path;
-                                }
-                                camCount++;
-                                textView.setText(camCount + "/5");
-                            }else{
-
-                                continue;
-                            }
-                        }catch (FileNotFoundException e){
-                            e.printStackTrace();
                         }catch (Exception e) {
                             e.printStackTrace();
                         }
                     }
                 }
+
             })
             .setPeekHeight(1600)
             .showTitle(false)
@@ -372,6 +325,109 @@ public class CameraActivity extends AppCompatActivity implements SurfaceHolder.C
 
         bottomSheetDialogFragment.show(getSupportFragmentManager());
     }
+
+    class FileWrite extends AsyncTask<Uri,Integer,Integer>{
+        ProgressDialog asyncDialog = new ProgressDialog(CameraActivity.this);
+        FileInputStream fin;
+        FileOutputStream fos;
+        FileChannel fcin;
+        FileChannel fcout;
+        @Override
+        protected void onPreExecute() {
+            Log.d(TAG, "onPreExecute: ");
+            asyncDialog.setProgressStyle(ProgressDialog.STYLE_SPINNER);
+            asyncDialog.setMessage("이미지 등록중입니다...");
+            asyncDialog.show();
+        }
+
+        @Override
+        protected void onPostExecute(Integer integer) {
+            Log.d(TAG, "onPostExecute: 완료");
+            textView.setText(camCount + "/5");
+            asyncDialog.dismiss();
+        }
+
+        @Override
+        protected Integer doInBackground(Uri... files) {
+            try{
+                //String match = "[]";
+                String file_Path = files[0].toString();
+                //String new_file = new String(file_Path.getBytes("utf-8"),"utf-8");
+                String[] realPath = file_Path.split("//");
+                String filePath = realPath[1];
+                filePath = filePath.replaceAll("@","");
+                filePath = URLDecoder.decode(filePath);
+                selPhotoUri = files[0];
+                Log.d(TAG, "doInBackground: " + selPhotoUri.toString() + "// replace>>"+filePath);
+
+                String ext = getExtension(filePath);
+
+                BitmapFactory.Options options = new BitmapFactory.Options();
+                options.inSampleSize = 4;
+
+                Bitmap image = BitmapFactory.decodeStream(getContentResolver().openInputStream(selPhotoUri));
+
+                //ExifInterface exif = new ExifInterface(filePath);
+                image = ExifUtils.rotateBitmap(filePath,image);
+
+                if(image!=null) {
+                    //가로 세로 구분
+                    Bitmap resizeImg = Bitmap.createScaledBitmap(image, image.getWidth(), image.getHeight(), true);
+                    bytes = bitmapToByteArray(resizeImg);
+                    //url = "http://484848.co.kr/mobile/photo_upload.php";
+                    File file = new File(sd);
+                    file.mkdir();
+                    file_name = System.currentTimeMillis() + "_" + mb_id + "_" + camCount + "." + ext;
+                    path = sd + "/" + file_name;
+
+                    file = new File(path);
+                    fin = new FileInputStream(filePath);
+                    fos = new FileOutputStream(file);
+
+                    fcin = fin.getChannel();
+                    fcout = fos.getChannel();
+                    long size = fcin.size();
+                    fcin.transferTo(0,size,fcout);
+
+                    /*fos.write(bytes);
+                    fos.flush();
+                    fos.close();*/
+
+                    if (filename == null || filename == "") {
+                        filename = file_name;
+                    } else {
+                        filename = filename + "," + file_name;
+                    }
+                    if (mPath == null) {
+                        mPath = path;
+                    } else {
+                        mPath = mPath + "," + path;
+                    }
+                    camCount++;
+                }
+            }catch (FileNotFoundException e){
+                e.printStackTrace();
+            }catch (Exception e){
+                e.printStackTrace();
+            }finally {
+                try {
+                    fcout.close();
+                    fcin.close();
+                    fos.close();
+                    fin.close();
+                }catch (Exception e){
+                    e.printStackTrace();
+                }
+            }
+            return camCount;
+        }
+
+        @Override
+        protected void onProgressUpdate(Integer... values) {
+            Log.d(TAG, "onProgressUpdate: ");
+        }
+    }
+
     private static int getExifOrientation(String src) throws IOException {
         int orientation = 1;
         try {
@@ -500,7 +556,7 @@ public class CameraActivity extends AppCompatActivity implements SurfaceHolder.C
                         }
                     });
                     if (filename != null) {
-                        url = "http://mave01.cafe24.com/mobile/photo_upload.php";
+                        url = "http://484848.co.kr/mobile/photo_upload.php";
                         String[] files = filename.split(",");
                         String[] paths = mPath.split(",");
                         for (int i = 0; i < files.length; i++) {
@@ -509,7 +565,7 @@ public class CameraActivity extends AppCompatActivity implements SurfaceHolder.C
                         }
                     }
                     if (videoname != null) {
-                        url = "http://mave01.cafe24.com/mobile/video_upload.php";
+                        url = "http://484848.co.kr/mobile/video_upload.php";
                         String vpath = sd + "/" + videoname;
                         Log.d(TAG, "video : " + videoname + "// vpath : " + vpath);
                         uploadFile(vpath, sd, videoname, url);
@@ -628,17 +684,18 @@ public class CameraActivity extends AppCompatActivity implements SurfaceHolder.C
     };
 
     public byte[] bitmapToByteArray( Bitmap bitmap ) {
-        ByteArrayOutputStream stream = new ByteArrayOutputStream() ;
+        byte[] byteArray = null;
+        ByteArrayOutputStream stream = new ByteArrayOutputStream();
         bitmap.compress( Bitmap.CompressFormat.JPEG, 100, stream) ;
-        byte[] byteArray = stream.toByteArray() ;
-        String image = Base64.encodeToString(byteArray,Base64.DEFAULT);
-        String temp = "";
-        try{
-            temp = "&image1="+ URLEncoder.encode(image,"utf-8");
-        }catch (Exception e){
-            e.printStackTrace();
-        }
-        return byteArray ;
+        byteArray = stream.toByteArray() ;
+        //String image = Base64.encodeToString(byteArray,Base64.DEFAULT);
+        //String temp = "";
+        //try{
+        //    temp = "&image1="+ URLEncoder.encode(image,"utf-8");
+        //}catch (Exception e){
+        //    e.printStackTrace();
+        //}
+        return byteArray;
     }
 
     @Override
@@ -789,9 +846,9 @@ public class CameraActivity extends AppCompatActivity implements SurfaceHolder.C
             previewSize = getBestPreviewSize(presize.width,presize.height);
             optimalSize = CameraHelper.getOptimalVideoSize(mSupportedPreviewSizes,mSupportedVideoSizes, surfaceView.getWidth(),surfaceView.getHeight());
             Log.d(TAG, "initCamera: " + optimalSize.width + "//" + optimalSize.height + "//" + angle);
-            camParams.setPictureSize(previewSize.width,previewSize.height);
-            camParams.setPreviewSize(previewSize.width,previewSize.height);
-            //Log.d(TAG, "프리뷰 사이즈 :: " + previewSize.width+"/"+previewSize.height);
+            camParams.setPictureSize(optimalSize.width,optimalSize.height);
+            camParams.setPreviewSize(previewSize.width,optimalSize.height);
+            //Log.d(TAG, "프리뷰 사이즈 :: optimalSize + previewSize.width+"/"+previewSize.height);
             camParams.setRotation(dgree);
             //Log.d(TAG, "initCamera: " + camParams.getPreviewSize().width + "//" + camParams.getPreviewSize().height+ "//" + surfaceView.getHeight() + "//" + surfaceView.getWidth());
             camera.setParameters(camParams);
@@ -854,6 +911,7 @@ public class CameraActivity extends AppCompatActivity implements SurfaceHolder.C
     }
 
     public int uploadFile(String sourceFileUri,final String uploadFilePath,final String uploadFileName,String upLoadServerUri) {
+        Log.d(TAG, "uploadFile: "+sourceFileUri + "//"+uploadFileName+"//"+uploadFilePath);
         String fileName = sourceFileUri;
         HttpURLConnection conn = null;
         DataOutputStream dos = null;
@@ -1203,5 +1261,22 @@ public class CameraActivity extends AppCompatActivity implements SurfaceHolder.C
         return false;
     }
 
+    /**파일 확장자 가져오기
+     * @param fileStr 경로나 파일이름
+     * @return*/
+    public static String getExtension(String fileStr){
+        String fileExtension = fileStr.substring(fileStr.lastIndexOf(".")+1,fileStr.length());
+        return TextUtils.isEmpty(fileExtension) ? null : fileExtension;
+    }
 
+    /** Check if this device has a camera */
+    private boolean checkCameraHardware(Context context) {
+        if (context.getPackageManager().hasSystemFeature(PackageManager.FEATURE_CAMERA)){
+            // this device has a camera
+            return true;
+        } else {
+            // no camera on this device
+            return false;
+        }
+    }
 }

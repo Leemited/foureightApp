@@ -15,20 +15,28 @@ package com.foureight;
  * limitations under the License.
  */
 
+import android.app.Notification;
+import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
+import android.app.TaskStackBuilder;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.media.AudioAttributes;
 import android.media.RingtoneManager;
 import android.net.Uri;
+import android.os.Binder;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.IBinder;
 import android.os.PowerManager;
 import android.support.v4.app.NotificationCompat;
 import android.util.Log;
+import android.webkit.WebView;
+import android.widget.RemoteViews;
 import android.widget.Toast;
 
 import com.firebase.jobdispatcher.FirebaseJobDispatcher;
@@ -40,13 +48,15 @@ import com.google.firebase.messaging.RemoteMessage;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
     private static final String TAG = "MyFirebaseMsgService";
     Bitmap bigPicture;
     private int badgeCount = 0;
-
     /**
      * Called when message is received.
      *
@@ -90,8 +100,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
         // Also if you intend on generating your own notifications as a result of a received FCM
         // message, here is where that should be initiated. See sendNotification method below.
-        sendNotification(remoteMessage.getData().get("title"), remoteMessage.getData().get("message"), remoteMessage.getData().get("message"), remoteMessage.getData().get("urls"), remoteMessage.getData().get("chennal"), remoteMessage.getData().get("channelname"), remoteMessage.getData().get("imgurlstr"));
-
+        sendNotification(remoteMessage.getData().get("title"), remoteMessage.getData().get("message"), remoteMessage.getData().get("message"), remoteMessage.getData().get("urls"), remoteMessage.getData().get("chennal"), remoteMessage.getData().get("channelname"), remoteMessage.getData().get("imgurlstr"),remoteMessage.getData().get("msg"),remoteMessage.getData().get("groupid"));
     }
     // [END receive_message]
 
@@ -121,24 +130,28 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
      *
      * @param messageBody FCM message body received.
      */
-    private void sendNotification(String title, String messageBody, CharSequence longMessage, String url,String channelId,String channelName, String imgurlstr) {
+    private void sendNotification(String title, String messageBody, CharSequence longMessage, String url,String channelId,String channelName, String imgurlstr,String msg, String groupId) {
+        Log.d(TAG, "sendNotification: " + PRRUN.bAppRunned);
         if(PRRUN.bAppRunned==false) {
             Intent intent = new Intent(this, MainActivity.class);
-            intent.addFlags(Intent.FLAG_ACTIVITY_MULTIPLE_TASK);
+            intent.setAction(Intent.ACTION_MAIN);
+            intent.addCategory(Intent.CATEGORY_LAUNCHER);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             Bundle bundle = new Bundle();
             bundle.putString("url", url);
             intent.putExtras(bundle);
-            PendingIntent pendingIntent = PendingIntent.getActivity(this, 0 /* Request code */, intent,
-                    PendingIntent.FLAG_UPDATE_CURRENT);
-            try {
-                URL photos = new URL(imgurlstr);
-                HttpURLConnection connection = (HttpURLConnection) photos.openConnection();
-                connection.setDoInput(true);
-                connection.connect();
-                InputStream bis = connection.getInputStream();
-                bigPicture = BitmapFactory.decodeStream(bis);
-            } catch (Exception e) {
-                e.printStackTrace();
+            PendingIntent pendingIntent = PendingIntent.getActivity(this, 0 /* Request code */, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+            if (imgurlstr != null) {
+                try {
+                    URL photos = new URL(imgurlstr);
+                    HttpURLConnection connection = (HttpURLConnection) photos.openConnection();
+                    connection.setDoInput(true);
+                    connection.connect();
+                    InputStream bis = connection.getInputStream();
+                    bigPicture = BitmapFactory.decodeStream(bis);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
             }
 
             //String channelId = getString(R.string.default_notification_channel_id);
@@ -158,11 +171,10 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                     .setContentIntent(pendingIntent)
                     .setAutoCancel(true)
                     .setSound(defaultSoundUri)
-                    .setVibrate(new long[]{100, 0, 0, 400, 0, 0, 100, 0, 0, 500, 0, 0});
+                    .setVibrate(new long[]{0,1500,1000,300,3000,200});
 
 
-            NotificationManager notificationManager =
-                    (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+            NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
 
             notificationBuilder.setStyle(new NotificationCompat.BigTextStyle().bigText(longMessage));
 
@@ -173,8 +185,6 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
             PowerManager pm = (PowerManager) this.getSystemService(Context.POWER_SERVICE);
             PowerManager.WakeLock wakelock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP, "TAG");
             wakelock.acquire(5000);
-
-            //메인액티비티의 웹뷰 정보?
 
             notificationManager.notify(0, notificationBuilder.build());
 
@@ -198,8 +208,156 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
             editor.putInt("badgeCount", badgeCount);
             editor.commit();
         }else{
+            Uri defaultSoundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALL);
+            AudioAttributes att = new AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                    .build();
+            String newId = "newChat";
+            String newName = "실행중채팅알림";
+            NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+            NotificationChannel buyChannel = null;
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                buyChannel = new NotificationChannel(newId, newName, NotificationManager.IMPORTANCE_HIGH);
+                buyChannel.setSound(defaultSoundUri, att);
+                buyChannel.setDescription("앱실행중 채팅 설정 입니다.");
+                buyChannel.enableVibration(true);
+                buyChannel.setVibrationPattern(new long[]{0, 0});
 
+                notificationManager.createNotificationChannel(buyChannel);
+            }
+            if(!channelId.equals("chat_alarm_set")){
+                Log.d(TAG, "sendNotification: not alarm");
+                Intent intent = new Intent(this, MainActivity.class);
+                intent.setAction(Intent.ACTION_MAIN);
+                intent.addCategory(Intent.CATEGORY_LAUNCHER);
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                Bundle bundle = new Bundle();
+                bundle.putString("url", url);
+                intent.putExtras(bundle);
+                PendingIntent pendingIntent = PendingIntent.getActivity(this, 0 /* Request code */, intent,PendingIntent.FLAG_UPDATE_CURRENT);
+                if (imgurlstr != null) {
+                    try {
+                        URL photos = new URL(imgurlstr);
+                        HttpURLConnection connection = (HttpURLConnection) photos.openConnection();
+                        connection.setDoInput(true);
+                        connection.connect();
+                        InputStream bis = connection.getInputStream();
+                        bigPicture = BitmapFactory.decodeStream(bis);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+                //String channelId = getString(R.string.default_notification_channel_id);
+                //Uri defaultSoundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
+                NotificationCompat.Builder notificationBuilder;
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    notificationBuilder =
+                            new NotificationCompat.Builder(this, channelId);
+                } else {
+                    notificationBuilder =
+                            new NotificationCompat.Builder(this);
+
+                }
+                notificationBuilder.setSmallIcon(R.drawable.ic_stat_name)
+                        .setContentTitle(title)
+                        .setContentText(messageBody)
+                        .setContentIntent(pendingIntent)
+                        .setFullScreenIntent(pendingIntent, true)
+                        .setAutoCancel(true)
+                        .setSound(null)
+                        .setVibrate(null);
+
+                //NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+
+                //notificationBuilder.setStyle(new NotificationCompat.BigTextStyle().bigText(longMessage));
+
+                /*if (imgurlstr != null) {
+                    notificationBuilder.setLargeIcon(bigPicture);
+                }*/
+
+                /*PowerManager pm = (PowerManager) this.getSystemService(Context.POWER_SERVICE);
+                PowerManager.WakeLock wakelock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP, "TAG");
+                wakelock.acquire(5000);*/
+
+                notificationManager.notify(0, notificationBuilder.build());
+            }else{
+                //todo: 이전 메시지가 언제 왔는지 체크후 얼마 되지 않았으면 그냥 무시 groupid로 체크?
+                //현재시간을 가져온다
+                long now = System.currentTimeMillis();
+                Date date = new Date(now);
+                SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddHHmm");
+                String nowDate = sdf.format(date);
+
+                SharedPreferences pref = getSharedPreferences("chatAlarm", MODE_PRIVATE);
+                String groupchk = pref.getString(groupId, "");
+                Log.d(TAG, "sendNotification: " + groupchk);
+
+                long min = 1;
+                if(groupchk=="" || groupchk==null) {
+                    SharedPreferences sharedPreferences = getSharedPreferences("chatAlarm", MODE_PRIVATE);
+                    SharedPreferences.Editor editor = sharedPreferences.edit();
+                    editor.putString(groupId, nowDate);
+                    editor.commit();
+                }else{
+                    SharedPreferences sharedPreferences = getSharedPreferences("chatAlarm", MODE_PRIVATE);
+                    SharedPreferences.Editor editor = sharedPreferences.edit();
+                    editor.putString(groupId, nowDate);
+                    editor.commit();
+                    //현재시간과 받은시간을 계산 1분이내인지 파악
+                    try {
+                        //String date1 = sdf.format(groupchk);
+                        Date startDate = sdf.parse(groupchk);
+                        Date endDate = sdf.parse(nowDate);
+
+                        long diff = endDate.getTime() - startDate.getTime();
+                        min = diff / (60 * 1000);
+                        //long hour = diff / (60 * 60 * 1000);
+
+                        Log.d(TAG, "diff : " + min + "//"+ startDate.toString() + "//" + endDate.toString());
+                    }catch (ParseException e){
+                        e.printStackTrace();
+                    }
+                }
+
+
+                if(min < 1){//1분 안이라면 스킵
+
+                }else {
+
+
+                    Intent intent = new Intent(this, MainActivity.class);
+                    intent.setAction(Intent.ACTION_MAIN);
+                    intent.addCategory(Intent.CATEGORY_LAUNCHER);
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    Bundle bundle = new Bundle();
+                    bundle.putString("url", url);
+                    intent.putExtras(bundle);
+                    PendingIntent pendingIntent = PendingIntent.getActivity(this, 0 /* Request code */, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+
+                    //String channelId = getString(R.string.default_notification_channel_id);
+                    NotificationCompat.Builder notificationBuilder;
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        notificationBuilder = new NotificationCompat.Builder(this, "newChat");
+                    } else {
+                        notificationBuilder = new NotificationCompat.Builder(this);
+                    }
+                    notificationBuilder.setSmallIcon(R.drawable.ic_stat_name)
+                            .setContentTitle(title)
+                            .setContentText(msg)
+                            .setContentIntent(pendingIntent)
+                            .setFullScreenIntent(pendingIntent, true)
+                            .setAutoCancel(true)
+                            .setSound(null)
+                            .setVibrate(null);
+
+                    //PowerManager pm = (PowerManager) this.getSystemService(Context.POWER_SERVICE);
+                    //PowerManager.WakeLock wakelock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP, "TAG");
+                    //wakelock.acquire(5000);
+
+                    notificationManager.notify(0, notificationBuilder.build());
+                }
+            }
         }
     }
-
 }

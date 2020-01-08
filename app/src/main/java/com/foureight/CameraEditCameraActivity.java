@@ -116,7 +116,7 @@ public class CameraEditCameraActivity extends AppCompatActivity implements Surfa
             }
         }
 
-        url = "http://mave01.cafe24.com/mobile/photo_upload.php";
+        url = "http://484848.co.kr/mobile/photo_upload.php";
         sd = Environment.getExternalStorageDirectory().getAbsolutePath()+"/foureight";
 
         textView = (TextView)findViewById(R.id.camCount2);
@@ -190,7 +190,8 @@ public class CameraEditCameraActivity extends AppCompatActivity implements Surfa
         photoBtn.setOnClickListener(new Button.OnClickListener(){
             @Override
             public void onClick(View v) {
-                Intent mediaScanIntent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
+                sd = Environment.getExternalStorageDirectory().getAbsolutePath() + "/foureight";
+                Intent mediaScanIntent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE,Uri.parse("file://"+sd));
                 File f = new File(sd); //새로고침할 사진경로
                 Uri contentUri = Uri.fromFile(f);
                 mediaScanIntent.setData(contentUri);
@@ -225,7 +226,7 @@ public class CameraEditCameraActivity extends AppCompatActivity implements Surfa
                                                     }
                                                 });
                                                 if(realname != null) {
-                                                    url = "http://mave01.cafe24.com/mobile/video_upload.php";
+                                                    url = "http://484848.co.kr/mobile/video_upload.php";
                                                     int result = uploadFile(path, sd, realname, url);
                                                     Log.d(TAG, "run: " + result);
                                                     if(result==200){
@@ -279,7 +280,7 @@ public class CameraEditCameraActivity extends AppCompatActivity implements Surfa
                                 }
                             });
                             /*if(filename != null) {
-                                url = "http://mave01.cafe24.com/mobile/photo_upload.php";
+                                url = "http://484848.co.kr/mobile/photo_upload.php";
                                 //String[] files = filename.split(",");
                                 //String[] paths = mPath.split(",");
                                 //for (int i = 0; i < files.length; i++) {
@@ -288,7 +289,7 @@ public class CameraEditCameraActivity extends AppCompatActivity implements Surfa
                                 //}
                             }*/
                             if(videoname!=null) {
-                                url = "http://mave01.cafe24.com/mobile/video_upload.php";
+                                url = "http://484848.co.kr/mobile/video_upload.php";
                                 String vpath = sd +"/"+ videoname;
                                 Log.d(TAG, "video : " + videoname + "// vpath : " + vpath);
                                 uploadFile(vpath, sd, videoname, url);
@@ -503,7 +504,7 @@ public class CameraEditCameraActivity extends AppCompatActivity implements Surfa
                         }
                     });
                     if(file_name != null) {
-                        url = "http://mave01.cafe24.com/mobile/photo_upload.php";
+                        url = "http://484848.co.kr/mobile/photo_upload.php";
                         int result = uploadFile(path, sd, file_name, url);
                         Log.d(TAG, "run: " + result);
                         if(result==200){
@@ -616,8 +617,8 @@ public class CameraEditCameraActivity extends AppCompatActivity implements Surfa
             previewSize = getBestPreviewSize(presize.width,presize.height);
             optimalSize = CameraHelper.getOptimalVideoSize(mSupportedPreviewSizes,mSupportedVideoSizes, surfaceView.getWidth(),surfaceView.getHeight());
             Log.d(TAG, "initCamera: " + optimalSize.width + "//" + optimalSize.height + "//" + angle + "//" + display.getRotation());
-            camParams.setPictureSize(previewSize.width,previewSize.height);
-            camParams.setPreviewSize(previewSize.width,previewSize.height);
+            camParams.setPictureSize(optimalSize.width,optimalSize.height);
+            camParams.setPreviewSize(optimalSize.width,optimalSize.height);
             //Log.d(TAG, "프리뷰 사이즈 :: " + previewSize.width+"/"+previewSize.height);
             camParams.setRotation(dgree);
             //Log.d(TAG, "initCamera: " + camParams.getPreviewSize().width + "//" + camParams.getPreviewSize().height+ "//" + surfaceView.getHeight() + "//" + surfaceView.getWidth());
@@ -988,7 +989,7 @@ public class CameraEditCameraActivity extends AppCompatActivity implements Surfa
             camera.lock();
 
             /*if(videoname!="") {
-                url = "http://mave01.cafe24.com/mobile/video_upload.php";
+                url = "http://484848.co.kr/mobile/video_upload.php";
                 String vpath = sd + "/" + videoname;
                 Log.d(TAG, "video : " + videoname + "// vpath : " + vpath);
                 uploadFile(vpath, sd, videoname, url);

@@ -10,18 +10,24 @@
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera2.full" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.RECORD_VIDEO" />
     <uses-permission android:name="android.permission.VIBRATE"/>
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
     <uses-feature android:name="android.hardware.camera" />
+    <uses-feature android:name="android.hardware.location.gps" />
+    <uses-feature android:name="android.hardware.camera.autofocus" />
+
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/AppTheme">
+        android:theme="@style/AppTheme"
+        android:usesCleartextTraffic="true"
+        >
         <activity
             android:name=".SplashActivity"
             android:theme="@style/Theme.AppCompat.NoActionBar">
@@ -58,8 +64,9 @@
             android:name=".MainActivity"
             android:theme="@style/Theme.AppCompat.Light.NoActionBar" android:screenOrientation="portrait" />
         <activity android:name=".CameraActivity" android:theme="@style/Theme.AppCompat.Light.NoActionBar" android:screenOrientation="sensor" android:configChanges="orientation|screenSize"/>
-        <activity android:name=".CameraEditActivity" android:theme="@style/Theme.AppCompat.Light.NoActionBar" android:screenOrientation="sensor"/>
-        <activity android:name=".CameraEditCameraActivity" android:theme="@style/Theme.AppCompat.Light.NoActionBar" android:screenOrientation="sensor"/>
+        <activity android:name=".CameraEditActivity" android:theme="@style/Theme.AppCompat.Light.NoActionBar" android:screenOrientation="sensor" android:configChanges="orientation|screenSize"/>
+        <activity android:name=".CameraEditCameraActivity" android:theme="@style/Theme.AppCompat.Light.NoActionBar" android:screenOrientation="sensor" android:configChanges="orientation|screenSize"/>
+        <activity android:name=".Camera2Activity" android:theme="@style/Theme.AppCompat.Light.NoActionBar" android:screenOrientation="sensor" />
     </application>
 
 </manifest>

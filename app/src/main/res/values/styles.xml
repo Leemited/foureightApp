@@ -10,5 +10,7 @@
         <item name="android:statusBarColor">#00000050</item>
         <item name="android:windowTranslucentStatus">true</item>
     </style>
-
+    <style name="progressBarTheme">
+        <item name="android:progressBackgroundTint">@color/mainColor</item>
+    </style>
 </resources>
