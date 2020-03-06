@@ -17,8 +17,8 @@
 
     <com.foureight.AutoFitTextureView
         android:id="@+id/texture"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
         android:layout_alignParentStart="true"
         android:layout_alignParentTop="true" />
 
@@ -62,10 +62,11 @@
             android:id="@+id/textView2"
             android:layout_width="13dp"
             android:layout_height="match_parent"
-            android:layout_gravity="bottom|right"
+            android:layout_gravity="right|top"
             android:layout_marginEnd="10dp"
-            android:gravity="center|top"
+            android:gravity="top"
             android:text="@string/cam_video_info"
+            android:textAlignment="center"
             android:textColor="@android:color/white"
             android:textSize="12sp" />
 
@@ -107,7 +108,7 @@
 
     <TextView
         android:id="@+id/camCount2"
-        android:layout_width="37dp"
+        android:layout_width="wrap_content"
         android:layout_height="19dp"
         android:layout_alignParentStart="true"
         android:layout_alignParentBottom="true"

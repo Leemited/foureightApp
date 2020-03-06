@@ -1,7 +1,9 @@
 package com.foureight;
 
 import android.content.Context;
+import android.content.res.Resources;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.TextureView;
 
 public class AutoFitTextureView extends TextureView {
@@ -35,13 +37,23 @@ public class AutoFitTextureView extends TextureView {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec);
         int width = MeasureSpec.getSize(widthMeasureSpec);
         int height = MeasureSpec.getSize(heightMeasureSpec);
+        double ratio = (double) mRatioWidth/mRatioHeight;
+        double cRatio = (double) width/width;
         if (0 == mRatioWidth || 0 == mRatioHeight) {
+            Log.d("Camera2BasicFragment", "onMeasure: "+width+"//"+height);
             setMeasuredDimension(width, height);
-        } else {
-            if (width < height * mRatioWidth / mRatioHeight) {
-                setMeasuredDimension(width, width * mRatioHeight / mRatioWidth);
+        }else{
+            if (ratio > 1) {
+                //setMeasuredDimension( width * mRatioHeight / mRatioWidth , width);
+                if (width < height * mRatioWidth / mRatioHeight) {
+                    Log.d("Camera2BasicFragment", "onMeasure: " + width +"//"+(width * mRatioHeight / mRatioWidth));
+                    setMeasuredDimension(width, width * mRatioHeight / mRatioWidth);
+                } else {
+                    Log.d("Camera2BasicFragment", "onMeasure: " + (height * mRatioWidth / mRatioHeight) +"//"+height);
+                    setMeasuredDimension(height * mRatioWidth / mRatioHeight, height);
+                }
             } else {
-                setMeasuredDimension(height * mRatioWidth / mRatioHeight, height);
+                setMeasuredDimension(width, height);
             }
         }
     }

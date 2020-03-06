@@ -13,6 +13,8 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
+import android.hardware.camera2.CameraAccessException;
+import android.hardware.camera2.CameraManager;
 import android.location.Location;
 import android.location.LocationManager;
 import android.media.AudioAttributes;
@@ -23,6 +25,8 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
 import android.os.Handler;
+import android.os.Message;
+import android.os.Process;
 import android.provider.Browser;
 import android.provider.Settings;
 import android.support.v4.app.ActivityCompat;
@@ -311,7 +315,7 @@ public class MainActivity extends AppCompatActivity {
 
         SharedPreferences scids = getSharedPreferences("searchId", MODE_PRIVATE);
         sc_id = scids.getString("sc_id", "");
-
+        Log.d(TAG, "onCreate: sc_id ??? " + sc_id);
         if (sc_id.trim() != null || sc_id.trim() != "") {
             if (!url.contains("sc_id")) {
                 if (url.contains("?")) {
@@ -377,6 +381,15 @@ public class MainActivity extends AppCompatActivity {
     private class AndroidBridge {
 
         @JavascriptInterface
+        public void resetScid(){
+            Log.d(TAG, "resetScid: ");
+            SharedPreferences pref = getSharedPreferences("searchId", MODE_PRIVATE);
+            SharedPreferences.Editor editor = pref.edit();
+            editor.putString("sc_id", "");
+            editor.commit();
+        }
+
+        @JavascriptInterface
         public void showLoading() {
             Log.d(TAG, "showLoading: On");
             runOnUiThread(new Runnable() {
@@ -407,7 +420,7 @@ public class MainActivity extends AppCompatActivity {
 
         @JavascriptInterface
         public String setLogin(String mb_id) {
-            //Log.d(TAG, "AndroidBridge: "+ mb_id);
+            Log.d(TAG, "AndroidBridge: "+ mb_id);
             if (mb_id != null) {
                 SharedPreferences pref = getSharedPreferences("AppLogin", MODE_PRIVATE);
                 SharedPreferences.Editor editor = pref.edit();
@@ -461,10 +474,25 @@ public class MainActivity extends AppCompatActivity {
         @JavascriptInterface
         public void camereOn(final String mb_id, final String title, final String cate1, final String cate2, final String type1, final String type2, final String wr_price, final String wr_price2, final String pd_price_type) {
             Log.d(TAG, "cameraOn :" + title);
-            Intent intent = new Intent(MainActivity.this, CameraActivity.class);
-            if (android.os.Build.VERSION.SDK_INT > Build.VERSION_CODES.LOLLIPOP) {
-                intent = new Intent(MainActivity.this, Camera2Activity.class);
+            CameraManager mCameraManager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
+            int camDeviceCount = 0;
+            try {
+                for (String cameraId : mCameraManager.getCameraIdList()) {
+                    camDeviceCount++;
+                }
+            }catch (CameraAccessException e) {
+                e.printStackTrace();
+            } catch (NullPointerException e) {
+                e.printStackTrace();
             }
+
+            //Intent intent = new Intent(MainActivity.this, CameraActivity.class);
+            //if (android.os.Build.VERSION.SDK_INT > Build.VERSION_CODES.LOLLIPOP) {
+                //if(camDeviceCount >= 3) {
+                Log.d(TAG, "cameraOn: camera2 적용");
+            Intent intent = new Intent(MainActivity.this, Camera2Activity.class);
+                //}
+            //}
             intent.putExtra("mb_id", mb_id);
             intent.putExtra("title", title);
             intent.putExtra("cate1", cate1);
@@ -600,109 +628,185 @@ public class MainActivity extends AppCompatActivity {
                 long intervalTime = tempTime - backPressedTime;
 
                 String filterUrl = curruntUrl.replace("http://484848.co.kr/","");
-                Log.d(TAG, "onKeyDown: " + filterUrl);
-                if(filterUrl != ""){
-                    if(filterUrl.contains("#")){//모달이 있는 상태이면
-                        Log.d(TAG, "onKeyDown: modals");
-                        if(filterUrl.contains("#view")){
-                            mWebview.loadUrl("javascript:modalCloseThis()");
-                        }else if(filterUrl.contains("#detailview")){
-                            Log.d(TAG, "onKeyDown: detailview");
-                            mWebview.loadUrl("javascript:fnDetailClose()");
-                        }else if(filterUrl.contains("#mapView")){
-                            mWebview.loadUrl("javascript:mapViewClose()");
-                        }else if(filterUrl.contains("#blind")){
-                            mWebview.loadUrl("javascript:blindClose()");
-                        }else if(filterUrl.contains("#preview")){
-                            mWebview.loadUrl("javascript:fnDetailHide()");
-                        }else if(filterUrl.contains("#talkView")){
-                            mWebview.loadUrl("javascript:modalCloseTalk()");
-                        }else if(filterUrl.contains("#search")){
-                            mWebview.loadUrl("javascript:fnSetting()");
-                        }else if(filterUrl.contains("#menu")){
-                            mWebview.loadUrl("javascript:closeMenu()");
-                        }else if(filterUrl.contains("#category")){
-                            mWebview.loadUrl("javascript:cateClose()");
-                        }else if(filterUrl.contains("#writes")){
-                            mWebview.loadUrl("javascript:modalClose()");
-                        }else if(filterUrl.contains("#mapsel")){
-                            Log.d(TAG, "onKeyDown: mapsel!!!");
-                            mWebview.loadUrl("javascript:mapSelect()");
-                        }else if(filterUrl.contains("#modal")){
-                            mWebview.loadUrl("javascript:modalClose()");
-                        }else if(filterUrl.contains("#")){
-                            if(!filterUrl.startsWith("/mobile")){
-                                if (0 <= intervalTime && FINISH_INTERVAL_TIME >= intervalTime) {
-                                    if (Build.VERSION.SDK_INT > 16) {
-                                        finishAffinity();
-                                    } else {
-                                        ActivityCompat.finishAffinity(this);
-                                    }
-                                    setFinished();
-                                    finish();
-                                    System.runFinalization();
-                                    System.exit(0);
-                                    //finish();
-                                } else {
-                                    backPressedTime = tempTime;
-                                    Toast.makeText(this, "뒤로 가기를 한 번 더 누르면 종료됩니다.", Toast.LENGTH_SHORT).show();
-                                }
-                            }else{
-                                mWebview.goBack();
-                            }
-                        }else {
-                            mWebview.loadUrl("javascript:modalClose()");
-                        }
-                    }else {
-                        if(filterUrl.startsWith("index.php")){
-                            Log.d(TAG, "onKeyDown: index??");
-                            if (0 <= intervalTime && FINISH_INTERVAL_TIME >= intervalTime) {
-                                if (Build.VERSION.SDK_INT > 16) {
-                                    finishAffinity();
-                                } else {
-                                    ActivityCompat.finishAffinity(this);
-                                }
-                                setFinished();
-                                finish();
-                                System.runFinalization();
-                                System.exit(0);
-                                //finish();
+                //Log.d(TAG, "onKeyDown: " + filterUrl);
+                if(backUrl.contains("_3_close.php")){
+                    mWebview.loadUrl(url);
+                    mWebview.clearHistory();
+                }else {
+                    if (filterUrl != "") {
+                        if (filterUrl.startsWith("mobile")) {//메인이 아닐때
+                            Log.d(TAG, "onKeyDown: sub??");
+                            if (filterUrl.contains("#view")) {
+                                mWebview.loadUrl("javascript:modalCloseThis()");
+                            } else if (filterUrl.contains("#detailview")) {
+                                mWebview.loadUrl("javascript:fnDetailClose()");
+                            } else if (filterUrl.contains("#mapView")) {
+                                mWebview.loadUrl("javascript:mapViewClose()");
+                            } else if (filterUrl.contains("#blind")) {
+                                mWebview.loadUrl("javascript:blindClose()");
+                            } else if (filterUrl.contains("#preview")) {
+                                mWebview.loadUrl("javascript:fnDetailHide()");
+                            } else if (filterUrl.contains("#talkView")) {
+                                mWebview.loadUrl("javascript:modalCloseTalk()");
+                            } else if (filterUrl.contains("#modal")) {
+                                mWebview.loadUrl("javascript:modalClose()");
+                            } else if (filterUrl.contains("#mapsel")) {
+                                mWebview.loadUrl("javascript:mapSelect()");
                             } else {
-                                backPressedTime = tempTime;
-                                Toast.makeText(this, "뒤로 가기를 한 번 더 누르면 종료됩니다.", Toast.LENGTH_SHORT).show();
+                                Log.d(TAG, "onKeyDown: 여기?" + mWebview.canGoBack());
+                                if (mWebview.canGoBack()) {
+                                    Log.d(TAG, "onKeyDown: 뒤로가기");
+                                    mWebview.goBack();
+                                } else {
+                                    if (0 <= intervalTime && FINISH_INTERVAL_TIME >= intervalTime) {
+                                        if (Build.VERSION.SDK_INT > 16) {
+                                            finishAffinity();
+                                        } else {
+                                            ActivityCompat.finishAffinity(this);
+                                        }
+                                        setFinished();
+                                        finish();
+                                        System.runFinalization();
+                                        System.exit(0);
+                                        moveTaskToBack(true);
+                                        finishAndRemoveTask();
+                                        Process.killProcess(Process.myPid());
+                                    } else {
+                                        backPressedTime = tempTime;
+                                        Toast.makeText(this, "뒤로 가기를 한 번 더 누르면 종료됩니다.", Toast.LENGTH_SHORT).show();
+                                    }
+                                }
                             }
-                        }else {
-                            Log.d(TAG, "onKeyDown: back??");
-                            if(backUrl.contains("#")){
-                                //무조건 인덱스로?
-                                if(backUrl.contains("#view")){
-                                    String[] hash = backUrl.split("#");
-                                    String[] pd_ids = hash[1].split("_");
-                                    String pd_id = pd_ids[1];
-                                    mWebview.loadUrl("http://484848.co.kr/index.php?pd_id="+pd_id);
-                                }else {
-                                    mWebview.loadUrl("http://484848.co.kr");
+                        } else {//메인페이지일때0
+                            Log.d(TAG, "onKeyDown: index??11");
+                            if (filterUrl.contains("#")) {//모달이 있는 상태이면
+                                Log.d(TAG, "onKeyDown: modals");
+                                if (filterUrl.contains("#view")) {
+                                    mWebview.loadUrl("javascript:modalCloseThis()");
+                                } else if (filterUrl.contains("#detailview")) {
+                                    mWebview.loadUrl("javascript:fnDetailClose()");
+                                } else if (filterUrl.contains("#mapView")) {
+                                    mWebview.loadUrl("javascript:mapViewClose()");
+                                } else if (filterUrl.contains("#blind")) {
+                                    mWebview.loadUrl("javascript:blindClose()");
+                                } else if (filterUrl.contains("#preview")) {
+                                    mWebview.loadUrl("javascript:fnDetailHide()");
+                                } else if (filterUrl.contains("#talkView")) {
+                                    mWebview.loadUrl("javascript:modalCloseTalk()");
+                                } else if (filterUrl.contains("#search")) {
+                                    mWebview.loadUrl("javascript:fnSetting()");
+                                } else if (filterUrl.contains("#menu")) {
+                                    mWebview.loadUrl("javascript:closeMenu()");
+                                } else if (filterUrl.contains("#category2")) {
+                                    mWebview.loadUrl("javascript:cateClose2()");
+                                } else if (filterUrl.contains("#category")) {
+                                    mWebview.loadUrl("javascript:cateClose()");
+                                } else if (filterUrl.contains("#writes")) {
+                                    mWebview.loadUrl("javascript:modalClose()");
+                                } else if (filterUrl.contains("#mapsel")) {
+                                    Log.d(TAG, "onKeyDown: mapsel!!!");
+                                    mWebview.loadUrl("javascript:mapSelect()");
+                                } else if (filterUrl.contains("#modal")) {
+                                    mWebview.loadUrl("javascript:modalClose()");
+                                } else if (filterUrl.contains("#chk")) {
+                                    mWebview.loadUrl("javascript:modalClose()");
+                                } else if (filterUrl.contains("#write_cate")) {
+                                    mWebview.loadUrl("javascript:modalClose()");
+                                } else if (filterUrl.contains("#like")) {
+                                    mWebview.loadUrl("javascript:likeClose()");
+                                } else if (filterUrl.contains("#")) {
+                                    if (0 <= intervalTime && FINISH_INTERVAL_TIME >= intervalTime) {
+                                        if (Build.VERSION.SDK_INT > 16) {
+                                            finishAffinity();
+                                        } else {
+                                            ActivityCompat.finishAffinity(this);
+                                        }
+                                        setFinished();
+                                        finish();
+                                        System.runFinalization();
+                                        System.exit(0);
+                                        moveTaskToBack(true);
+                                        finishAndRemoveTask();
+                                        Process.killProcess(Process.myPid());
+                                    } else {
+                                        backPressedTime = tempTime;
+                                        Toast.makeText(this, "뒤로 가기를 한 번 더 누르면 종료됩니다.", Toast.LENGTH_SHORT).show();
+                                    }
+                                } else {
+                                    mWebview.loadUrl("javascript:modalClose()");
                                 }
                             }else {
-                                mWebview.goBack();
+                                if (filterUrl.startsWith("index.php")) {
+                                    Log.d(TAG, "onKeyDown: index??");
+                                    if (0 <= intervalTime && FINISH_INTERVAL_TIME >= intervalTime) {
+                                        if (Build.VERSION.SDK_INT > 16) {
+                                            finishAffinity();
+                                        } else {
+                                            ActivityCompat.finishAffinity(this);
+                                        }
+                                        setFinished();
+                                        finish();
+                                        System.runFinalization();
+                                        System.exit(0);
+                                    } else {
+                                        backPressedTime = tempTime;
+                                        Toast.makeText(this, "뒤로 가기를 한 번 더 누르면 종료됩니다.", Toast.LENGTH_SHORT).show();
+                                    }
+                                } else {
+                                    Log.d(TAG, "onKeyDown: back??");
+                                    String backFilter = backUrl.replace("http://484848.co.kr/","");
+
+                                    if(backFilter.startsWith("mobile")){
+                                        Log.d(TAG, "onKeyDown: AAAA");
+                                        if(mWebview.canGoBack()) {
+                                            Log.d(TAG, "onKeyDown: CADA");
+                                            mWebview.goBack();
+                                        }else{
+                                            Log.d(TAG, "onKeyDown: AFEAWEAW");
+                                            mWebview.loadUrl("http://484848.co.kr");
+                                        }
+                                    }else {
+                                        Log.d(TAG, "onKeyDown: BBBB");
+                                        if(mWebview.canGoBack()) {
+                                            mWebview.goBack();
+                                        }else{
+                                            if (backUrl.contains("#")) {
+                                                //무조건 인덱스로?
+                                                if (backUrl.contains("#view")) {
+                                                    String[] hash = backUrl.split("#");
+                                                    String[] pd_ids = hash[1].split("_");
+                                                    String pd_id = pd_ids[1];
+                                                    mWebview.loadUrl("http://484848.co.kr/index.php?pd_id=" + pd_id);
+                                                } else {
+                                                    mWebview.loadUrl("http://484848.co.kr");
+                                                }
+                                            } else {
+                                                mWebview.goBack();
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
-                    }
-                }else{
-                    if (0 <= intervalTime && FINISH_INTERVAL_TIME >= intervalTime) {
-                        if (Build.VERSION.SDK_INT > 16) {
-                            finishAffinity();
-                        } else {
-                            ActivityCompat.finishAffinity(this);
-                        }
-                        setFinished();
-                        finish();
-                        System.runFinalization();
-                        System.exit(0);
-                        //finish();
                     } else {
-                        backPressedTime = tempTime;
-                        Toast.makeText(this, "뒤로 가기를 한 번 더 누르면 종료됩니다.", Toast.LENGTH_SHORT).show();
+                        Log.d(TAG, "onKeyDown: index?? end");
+                        if (0 <= intervalTime && FINISH_INTERVAL_TIME >= intervalTime) {
+                            if (Build.VERSION.SDK_INT > 16) {
+                                finishAffinity();
+                            } else {
+                                ActivityCompat.finishAffinity(this);
+                            }
+                            setFinished();
+                            finish();
+                            System.runFinalization();
+                            System.exit(0);
+                            moveTaskToBack(true);
+                            finishAndRemoveTask();
+                            Process.killProcess(Process.myPid());
+                        } else {
+                            backPressedTime = tempTime;
+                            Toast.makeText(this, "뒤로 가기를 한 번 더 누르면 종료됩니다.", Toast.LENGTH_SHORT).show();
+                        }
                     }
                 }
                 return true;
@@ -851,7 +955,7 @@ public class MainActivity extends AppCompatActivity {
     private class CustomWebClient extends WebViewClient {
         @Override
         public void onUnhandledKeyEvent(WebView view, KeyEvent event) {
-            Log.d(TAG, "onUnhandledKeyEvent: " + view.getUrl());
+            Log.d(TAG, "onUnhandledKeyEvent: " + view.getUrl() + "//" + event.getKeyCode());
             if (event.getKeyCode() == 66 && view.getUrl().contains("my_location.php")) {
                 view.loadUrl("javascript:mapKeySet()");
             }
@@ -859,18 +963,17 @@ public class MainActivity extends AppCompatActivity {
                 view.loadUrl("javascript:fnOnCam()");
             }
             if (event.getKeyCode() == 66 && view.getUrl().contains("#mapsel")) {
-                view.loadUrl("javascript:mapSelect()");
-                //todo:mapSelect일경우만 인데 일반 입력창에서도 됨..
+                //view.loadUrl("javascript:mapSelect()");
                 Log.d(TAG, "onUnhandledKeyEvent: " + view.getUrl());
                 //if(!view.getUrl().contains("write.php")) {
-                    Handler delayHandler = new Handler();
+                    /*Handler delayHandler = new Handler();
                     delayHandler.postDelayed(new Runnable() {
                         @Override
                         public void run() {
                             InputMethodManager inputMethodManager = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
                             inputMethodManager.hideSoftInputFromWindow(mWebview.getWindowToken(), 0);
                         }
-                    }, 1200);
+                    }, 1200);*/
                 //}
             }
             //super.onUnhandledKeyEvent(view, event);
@@ -878,6 +981,8 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         public boolean shouldOverrideUrlLoading(WebView view, String url) {
+            Log.d(TAG, "shouldOverrideUrlLoading B : " + url);
+
             if (!isNetworkConnected(MainActivity.this)) {
                 /*CommonDialogs cm = new CommonDialogs(MainActivity.this);
 
@@ -888,6 +993,9 @@ public class MainActivity extends AppCompatActivity {
                     }
                 },null);*/
                 finish();
+                moveTaskToBack(true);
+                finishAndRemoveTask();
+                Process.killProcess(Process.myPid());
                 Toast.makeText(MainActivity.this, "현재 인터넷이 연결되어 있지 않아 앱을 종료 하였습니다.", Toast.LENGTH_SHORT).show();
             }
 
@@ -938,6 +1046,8 @@ public class MainActivity extends AppCompatActivity {
 
                 return true;
             }*/
+            Log.d(TAG, "shouldOverrideUrlLoading A : " + url);
+
 
             if ((url.startsWith("http://") || url.startsWith("https://")) && (url.contains("market.android.com") || url.contains("m.ahnlab.com/kr/site/download"))) {
                 Uri uri = Uri.parse(url);
@@ -951,7 +1061,7 @@ public class MainActivity extends AppCompatActivity {
             } else if (url != null
                     && (url.contains("vguard") || url.contains("droidxantivirus") || url.contains("smhyundaiansimclick://")
                     || url.contains("smshinhanansimclick://") || url.contains("smshinhancardusim://") || url.contains("smartwall://") || url.contains("appfree://")
-                    || url.contains("v3mobile") || url.endsWith(".apk") || url.contains("market://") || url.contains("ansimclick")
+                    || url.contains("v3mobile") || url.endsWith(".apk") || url.contains("market://") || url.contains("ansimclick") || url.contains("kakaotalk://")
                     || url.contains("market://details?id=com.shcard.smartpay") || url.contains("shinhan-sr-ansimclick://"))) {
                 Intent intent = null;
                 // 인텐트 정합성 체크
@@ -1000,7 +1110,6 @@ public class MainActivity extends AppCompatActivity {
                     return false;
                 }
             }
-            Log.d(TAG, "shouldOverrideUrlLoading: " + url);
             // 계좌이체 커스텀 스키마
             if (url.startsWith("smartxpay-transfer://")) {
                 boolean isatallFlag = isPackageInstalled(getApplicationContext(), "kr.co.uplus.ecredit");
@@ -1088,6 +1197,7 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         public void onPageStarted(WebView view, String url, Bitmap favicon) {
+            Log.d(TAG, "onPageStarted: url? = " + url);
             progressBar.setVisibility(View.VISIBLE);
         }
 
@@ -1258,11 +1368,19 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onDestroy() {
+        super.onDestroy();
+        Log.d(TAG, "onDestroy: ");
         InputMethodManager inputMethodManager = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
         inputMethodManager.hideSoftInputFromWindow(mWebview.getWindowToken(), 0);
-        setFinished();
-        PRRUN.bAppRunned = false;
-        super.onDestroy();
+        Handler fin = new Handler(new Handler.Callback() {
+            @Override
+            public boolean handleMessage(Message msg) {
+                Log.d(TAG, "handleMessage: ");
+                setFinished();
+                PRRUN.bAppRunned = false;
+                return false;
+            }
+        });
     }
 
     @Override
@@ -1317,17 +1435,21 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void setFinished() {
+
         String url = mWebview.getUrl();
         Log.d(TAG, "setFinished: " + url);
         String split = "\\?";
         String[] param = url.split(split);
         if (param.length > 1) {
+            Log.d(TAG, "setFinished: ");
             String[] step1 = param[1].split("&");
             for (int i = 0; i < step1.length; i++) {
+                Log.d(TAG, "setFinished: sc_id??" + step1[i]);
                 if (step1[i].contains("sc_id")) {
                     String[] step2 = step1[i].split("=");
                     SharedPreferences pref = getSharedPreferences("searchId", MODE_PRIVATE);
                     SharedPreferences.Editor editor = pref.edit();
+                    Log.d(TAG, "setFinished: " + step2[1]);
                     editor.putString("sc_id", step2[1]);
                     editor.commit();
                 }
@@ -1339,6 +1461,5 @@ public class MainActivity extends AppCompatActivity {
             editor.commit();
         }
     }
-
 }
 

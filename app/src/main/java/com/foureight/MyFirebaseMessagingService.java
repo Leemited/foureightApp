@@ -100,7 +100,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
         // Also if you intend on generating your own notifications as a result of a received FCM
         // message, here is where that should be initiated. See sendNotification method below.
-        sendNotification(remoteMessage.getData().get("title"), remoteMessage.getData().get("message"), remoteMessage.getData().get("message"), remoteMessage.getData().get("urls"), remoteMessage.getData().get("chennal"), remoteMessage.getData().get("channelname"), remoteMessage.getData().get("imgurlstr"),remoteMessage.getData().get("msg"),remoteMessage.getData().get("groupid"));
+        sendNotification(remoteMessage.getData().get("title"), remoteMessage.getData().get("message"), remoteMessage.getData().get("message"), remoteMessage.getData().get("urls"), remoteMessage.getData().get("chennal"), remoteMessage.getData().get("channelname"), remoteMessage.getData().get("imgurlstr"),remoteMessage.getData().get("msg"),remoteMessage.getData().get("groupid"),remoteMessage.getData().get("etiquette"));
     }
     // [END receive_message]
 
@@ -130,9 +130,9 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
      *
      * @param messageBody FCM message body received.
      */
-    private void sendNotification(String title, String messageBody, CharSequence longMessage, String url,String channelId,String channelName, String imgurlstr,String msg, String groupId) {
-        Log.d(TAG, "sendNotification: " + PRRUN.bAppRunned);
-        if(PRRUN.bAppRunned==false) {
+    private void sendNotification(String title, String messageBody, CharSequence longMessage, String url,String channelId,String channelName, String imgurlstr,String msg, String groupId,String etiquette) {
+        Log.d(TAG, "sendNotification: " + PRRUN.bAppRunned + "//"+etiquette);
+        if(PRRUN.bAppRunned==false) { //일반
             Intent intent = new Intent(this, MainActivity.class);
             intent.setAction(Intent.ACTION_MAIN);
             intent.addCategory(Intent.CATEGORY_LAUNCHER);
@@ -140,7 +140,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
             Bundle bundle = new Bundle();
             bundle.putString("url", url);
             intent.putExtras(bundle);
-            PendingIntent pendingIntent = PendingIntent.getActivity(this, 0 /* Request code */, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+            PendingIntent pendingIntent = PendingIntent.getActivity(this, (int)(System.currentTimeMillis()/1000) /* Request code */, intent, PendingIntent.FLAG_UPDATE_CURRENT);
             if (imgurlstr != null) {
                 try {
                     URL photos = new URL(imgurlstr);
@@ -154,26 +154,61 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                 }
             }
 
-            //String channelId = getString(R.string.default_notification_channel_id);
             Uri defaultSoundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
             NotificationCompat.Builder notificationBuilder;
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                notificationBuilder =
-                        new NotificationCompat.Builder(this, channelId);
-            } else {
-                notificationBuilder =
-                        new NotificationCompat.Builder(this);
 
+            if(etiquette.equals("true")) {
+                Log.d(TAG, "sendNotification: etiquette");
+                NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                    String channel = "etiquette_alarm";
+                    NotificationChannel buyChannel = new NotificationChannel(channel, "에티켓알림", NotificationManager.IMPORTANCE_LOW);
+                    buyChannel.setSound(null,null);
+                    buyChannel.enableVibration(true);
+                    buyChannel.setVibrationPattern(null);
+                    notificationManager.createNotificationChannel(buyChannel);
+                    Log.d(TAG, "sendNotification: buyChannel = " + buyChannel);
+                    notificationBuilder =
+                            new NotificationCompat.Builder(this, channel);
+                } else {
+                    notificationBuilder =
+                            new NotificationCompat.Builder(this);
+                }
+                notificationBuilder.setSmallIcon(R.drawable.ic_stat_name)
+                        .setContentTitle(title)
+                        .setContentText(messageBody)
+                        .setContentIntent(pendingIntent)
+                        .setAutoCancel(true)
+                        .setSound(null)
+                        .setVibrate(null);
+            }else {
+                Log.d(TAG, "sendNotification: no etiquette");
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    AudioAttributes att = new AudioAttributes.Builder()
+                            .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+                            .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                            .build();
+                    NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+                    NotificationChannel buyChannel = new NotificationChannel(channelId, channelName, NotificationManager.IMPORTANCE_HIGH);
+                    buyChannel.setSound(defaultSoundUri,att);
+                    buyChannel.enableVibration(true);
+                    buyChannel.setVibrationPattern(new long[]{0, 1500, 1000, 300, 3000, 200});
+                    notificationManager.createNotificationChannel(buyChannel);
+                    notificationBuilder =
+                            new NotificationCompat.Builder(this, channelId);
+                } else {
+                    notificationBuilder =
+                            new NotificationCompat.Builder(this);
+
+                }
+                notificationBuilder.setSmallIcon(R.drawable.ic_stat_name)
+                        .setContentTitle(title)
+                        .setContentText(messageBody)
+                        .setContentIntent(pendingIntent)
+                        .setAutoCancel(true)
+                        .setSound(defaultSoundUri)
+                        .setVibrate(new long[]{0, 1500, 1000, 300, 3000, 200});
             }
-            notificationBuilder.setSmallIcon(R.drawable.ic_stat_name)
-                    .setContentTitle(title)
-                    .setContentText(messageBody)
-                    .setContentIntent(pendingIntent)
-                    .setAutoCancel(true)
-                    .setSound(defaultSoundUri)
-                    .setVibrate(new long[]{0,1500,1000,300,3000,200});
-
-
             NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
 
             notificationBuilder.setStyle(new NotificationCompat.BigTextStyle().bigText(longMessage));
@@ -186,7 +221,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
             PowerManager.WakeLock wakelock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP, "TAG");
             wakelock.acquire(5000);
 
-            notificationManager.notify(0, notificationBuilder.build());
+            notificationManager.notify((int)(System.currentTimeMillis()/1000), notificationBuilder.build());
 
             SharedPreferences pref = getSharedPreferences("badge_count", MODE_PRIVATE);
 
@@ -207,7 +242,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
             SharedPreferences.Editor editor = pref.edit();
             editor.putInt("badgeCount", badgeCount);
             editor.commit();
-        }else{
+        }else{ //실행중 채팅
             Uri defaultSoundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALL);
             AudioAttributes att = new AudioAttributes.Builder()
                     .setUsage(AudioAttributes.USAGE_NOTIFICATION)
@@ -223,7 +258,6 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                 buyChannel.setDescription("앱실행중 채팅 설정 입니다.");
                 buyChannel.enableVibration(true);
                 buyChannel.setVibrationPattern(new long[]{0, 0});
-
                 notificationManager.createNotificationChannel(buyChannel);
             }
             if(!channelId.equals("chat_alarm_set")){
@@ -235,7 +269,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                 Bundle bundle = new Bundle();
                 bundle.putString("url", url);
                 intent.putExtras(bundle);
-                PendingIntent pendingIntent = PendingIntent.getActivity(this, 0 /* Request code */, intent,PendingIntent.FLAG_UPDATE_CURRENT);
+                PendingIntent pendingIntent = PendingIntent.getActivity(this,  (int)(System.currentTimeMillis()/1000)/* Request code */, intent,PendingIntent.FLAG_UPDATE_CURRENT);
                 if (imgurlstr != null) {
                     try {
                         URL photos = new URL(imgurlstr);
@@ -270,7 +304,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
                 //NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
 
-                //notificationBuilder.setStyle(new NotificationCompat.BigTextStyle().bigText(longMessage));
+                notificationBuilder.setStyle(new NotificationCompat.BigTextStyle().bigText(longMessage));
 
                 /*if (imgurlstr != null) {
                     notificationBuilder.setLargeIcon(bigPicture);
@@ -280,7 +314,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                 PowerManager.WakeLock wakelock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP, "TAG");
                 wakelock.acquire(5000);*/
 
-                notificationManager.notify(0, notificationBuilder.build());
+                notificationManager.notify((int)(System.currentTimeMillis()/1000), notificationBuilder.build());
             }else{
                 //todo: 이전 메시지가 언제 왔는지 체크후 얼마 되지 않았으면 그냥 무시 groupid로 체크?
                 //현재시간을 가져온다
@@ -324,8 +358,6 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                 if(min < 1){//1분 안이라면 스킵
 
                 }else {
-
-
                     Intent intent = new Intent(this, MainActivity.class);
                     intent.setAction(Intent.ACTION_MAIN);
                     intent.addCategory(Intent.CATEGORY_LAUNCHER);
@@ -350,7 +382,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                             .setAutoCancel(true)
                             .setSound(null)
                             .setVibrate(null);
-
+                    notificationBuilder.setStyle(new NotificationCompat.BigTextStyle().bigText(longMessage));
                     //PowerManager pm = (PowerManager) this.getSystemService(Context.POWER_SERVICE);
                     //PowerManager.WakeLock wakelock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP, "TAG");
                     //wakelock.acquire(5000);

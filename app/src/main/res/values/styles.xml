@@ -13,4 +13,8 @@
     <style name="progressBarTheme">
         <item name="android:progressBackgroundTint">@color/mainColor</item>
     </style>
+
+    <style name="CamTheme" parent="Theme.AppCompat.NoActionBar">
+        <item name="android:windowFullscreen">true</item>
+    </style>
 </resources>

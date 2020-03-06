@@ -24,15 +24,13 @@
         tools:layout_editor_absoluteY="0dp" />
 
     <ProgressBar
+        android:id="@+id/progressBar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
         android:indeterminateTint="@color/mainColor"
         android:indeterminateTintMode="src_atop"
         android:progressBackgroundTint="@color/mainColor"
-        android:id="@+id/progressBar"
         android:theme="@style/progressBarTheme"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginEnd="8dp"
-        android:layout_marginBottom="8dp"
         app:layout_constraintBottom_toBottomOf="@+id/webview"
         app:layout_constraintEnd_toEndOf="@+id/webview"
         app:layout_constraintStart_toStartOf="@+id/webview"

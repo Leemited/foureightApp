@@ -464,6 +464,7 @@ public class CameraActivity extends AppCompatActivity implements SurfaceHolder.C
     }
 
     public void isCapture(){
+        Log.d(TAG, "isCapture: ");
         if(isPicture==false) {
             if(camCount < 5) {
                 camera.autoFocus(camAutoFocuse);
@@ -611,15 +612,17 @@ public class CameraActivity extends AppCompatActivity implements SurfaceHolder.C
     Camera.AutoFocusCallback camAutoFocuse = new Camera.AutoFocusCallback() {
         @Override
         public void onAutoFocus(boolean success, Camera cam) {
-            Log.d(TAG, "onAutoFocus: " + success);
-            if(success) {
-                camera.takePicture(mySutterCallback, null, myPictureCallback_JPG);
-            }else{
-                if(mCameraFacing==1){
+            Log.d(TAG, "onAutoFocus: " + success + "//"+isPicture + "//" + mySutterCallback + "//"+myPictureCallback_JPG);
+            if(!isRecording) {
+                if (success) {
                     camera.takePicture(mySutterCallback, null, myPictureCallback_JPG);
-                }else {
-                    Toast.makeText(CameraActivity.this, "포커스를 잡지 못했습니다.", Toast.LENGTH_SHORT).show();
-                    isPicture = false;
+                } else {
+                    if (mCameraFacing == 1) {
+                        camera.takePicture(mySutterCallback, null, myPictureCallback_JPG);
+                    } else {
+                        Toast.makeText(CameraActivity.this, "포커스를 잡지 못했습니다.", Toast.LENGTH_SHORT).show();
+                        isPicture = false;
+                    }
                 }
             }
         }
@@ -635,7 +638,7 @@ public class CameraActivity extends AppCompatActivity implements SurfaceHolder.C
     Camera.PictureCallback myPictureCallback_JPG = new Camera.PictureCallback() {
         @Override
         public void onPictureTaken(byte[] data, Camera cam) {
-
+            Log.d(TAG, "onPictureTaken: ");
             /*BitmapFactory.Options options = new BitmapFactory.Options();
             options.inSampleSize = 4;
             Bitmap image = BitmapFactory.decodeFile(filePath,options);
@@ -1209,6 +1212,7 @@ public class CameraActivity extends AppCompatActivity implements SurfaceHolder.C
             } else {
                 // prepare didn't work, release the camera
                 releaseMediaRecorder();
+                isPicture = true;
                 return false;
             }
             return true;

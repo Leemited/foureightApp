@@ -16,7 +16,6 @@ public class CommonDialogs extends Dialog {
     private Context mContext;
     private ProgressDialog progressDialog;
     protected boolean destroyed = false;
-
     public CommonDialogs(Context context) {
         super(context);
         mContext = context;
@@ -77,6 +76,7 @@ public class CommonDialogs extends Dialog {
         alertDialog.setMessage(stringId);
         alertDialog.show();
     }
+
     public void showAlertDialog(Context context, String message, DialogInterface.OnClickListener okListener,
                                 DialogInterface.OnClickListener cancelListener) {
         AlertDialog.Builder alertDialog = new AlertDialog.Builder(context);
@@ -136,7 +136,6 @@ public class CommonDialogs extends Dialog {
         dialog.show();
         return dialog;
     }
-
 
     public interface OnClickListener {
         void onClick(boolean isPositive, String text, AlertDialog dialog, View button, EditText editText);
